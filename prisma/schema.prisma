@@ -1,0 +1,284 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════
+// الموظفون — مجموعة القاضي الذهبية
+// ═══════════════════════════════════════════════════
+model Employee {
+  id          String   @id @default(cuid())
+  name        String
+  username    String   @unique
+  password    String   @db.VarChar(255)  // ⚠️ SECURITY: Must be bcrypt hashed — never store raw
+  role        String   @default("agent") @db.VarChar(20) // TODO: Convert to enum Role { ADMIN SUPERVISOR AGENT }
+  branch      String   @default("main")
+  title       String?
+  email       String?
+  phone       String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sessions    Session[]
+  leads       Lead[]
+  bookings    Booking[]
+  auditLogs   AuditLog[]
+
+  @@index([username])
+  @@index([branch])
+}
+
+// ═══════════════════════════════════════════════════
+// الجلسات — لنظام المصادقة
+// ═══════════════════════════════════════════════════
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  employeeId   String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+
+  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([sessionToken])
+  @@index([employeeId])
+}
+
+// ═══════════════════════════════════════════════════
+// الفنادق
+// ═══════════════════════════════════════════════════
+model Hotel {
+  id          String   @id @default(cuid())
+  name        String
+  nameEn      String?
+  city        String
+  country     String
+  stars       Int      @default(4)
+  description String?  @db.Text
+  priceFrom   Float    @default(0)
+  currency    String   @default("KWD")
+  images      Json?
+  imageUrl    String?
+  amenities   Json?
+  featured    Boolean  @default(false)
+  active      Boolean  @default(true)
+  externalId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rooms       Room[]
+
+  @@index([city])
+  @@index([country])
+  @@index([featured])
+}
+
+// ═══════════════════════════════════════════════════
+// الغرف
+// ═══════════════════════════════════════════════════
+model Room {
+  id          String   @id @default(cuid())
+  hotelId     String
+  type        String
+  price       Float
+  currency    String   @default("KWD")
+  capacity    Int      @default(2)
+  available   Boolean  @default(true)
+  images      Json?
+  amenities   Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId])
+  @@index([type])
+}
+
+// ═══════════════════════════════════════════════════
+// التأشيرات
+// ═══════════════════════════════════════════════════
+model Visa {
+  id            String   @id @default(cuid())
+  country       String
+  countryEn     String?
+  type          String   @default("tourism")
+  price         Float    @default(0)
+  currency      String   @default("KWD")
+  processingDays Int     @default(7)
+  requirements  Json?
+  documents     Json?
+  description   String?  @db.Text
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([country])
+  @@index([type])
+}
+
+// ═══════════════════════════════════════════════════
+// العملاء المحتملين (Leads)
+// ═══════════════════════════════════════════════════
+model Lead {
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  phone       String?
+  service     String?
+  message     String?  @db.Text
+  status      String   @default("new") @db.VarChar(20) // TODO: enum LeadStatus { NEW CONTACTED QUALIFIED CONVERTED LOST }
+  source      String   @default("website")
+  assignedTo  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  employee    Employee? @relation(fields: [assignedTo], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([assignedTo])
+  @@index([email])
+}
+
+// ═══════════════════════════════════════════════════
+// الأيدي العاملة (الوظائف)
+// ═══════════════════════════════════════════════════
+model Job {
+  id          String   @id @default(cuid())
+  title       String
+  titleEn     String?
+  category    String   @default("general")
+  country     String
+  salary      Float    @default(0)
+  currency    String   @default("KWD")
+  experience  String?
+  description String?  @db.Text
+  requirements Json?
+  imageUrl    String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([country])
+}
+
+// ═══════════════════════════════════════════════════
+// إعدادات الموقع
+// ═══════════════════════════════════════════════════
+model SiteSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value Json
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
+
+// ═══════════════════════════════════════════════════
+// إدارة العملاء (CRM)
+// ═══════════════════════════════════════════════════
+model Client {
+  id          String    @id @default(cuid())
+  name        String
+  email       String?   @unique
+  phone       String?   @unique
+  passportNo  String?
+  nationality String?
+  loyaltyPts  Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  bookings    Booking[]
+  tickets     SupportTicket[]
+}
+
+// ═══════════════════════════════════════════════════
+// الحجوزات والمبيعات (Bookings & Sales)
+// ═══════════════════════════════════════════════════
+model Booking {
+  id          String   @id @default(cuid())
+  clientId    String
+  employeeId  String?
+  serviceType String   @db.VarChar(30) // TODO: enum ServiceType { FLIGHT HOTEL VISA MANPOWER PACKAGE }
+  status      String   @default("pending") @db.VarChar(20) // TODO: enum BookingStatus { PENDING CONFIRMED CANCELLED COMPLETED }
+  totalAmount Float    @default(0)
+  paidAmount  Float    @default(0)
+  currency    String   @default("KWD")
+  details     Json?    // Stores specific booking details like flight PNR, hotel dates, etc.
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  client      Client   @relation(fields: [clientId], references: [id])
+  employee    Employee? @relation(fields: [employeeId], references: [id])
+
+  @@index([clientId])
+  @@index([employeeId])
+}
+
+// ═══════════════════════════════════════════════════
+// تذاكر الدعم الفني (Support Tickets)
+// ═══════════════════════════════════════════════════
+model SupportTicket {
+  id          String   @id @default(cuid())
+  clientId    String
+  subject     String
+  description String   @db.Text
+  status      String   @default("open") @db.VarChar(20) // TODO: enum TicketStatus { OPEN IN_PROGRESS RESOLVED CLOSED }
+  priority    String   @default("medium") @db.VarChar(10) // TODO: enum Priority { LOW MEDIUM HIGH URGENT }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  client      Client   @relation(fields: [clientId], references: [id])
+
+  @@index([clientId])
+}
+
+// ═══════════════════════════════════════════════════
+// قواعد البيانات الديناميكية (Dynamic Entity Manager)
+// ═══════════════════════════════════════════════════
+model DynamicSchema {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "insurance_companies"
+  labelAr     String   // e.g., "شركات التأمين"
+  fields      Json     // Array of field definitions { name, type, required }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  records     DynamicRecord[]
+}
+
+model DynamicRecord {
+  id        String   @id @default(cuid())
+  schemaId  String
+  data      Json     // The actual dynamic data stored as JSON
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  schema    DynamicSchema @relation(fields: [schemaId], references: [id], onDelete: Cascade)
+
+  @@index([schemaId])
+}
+
+// ═══════════════════════════════════════════════════
+// سجل العمليات (Audit Log)
+// ═══════════════════════════════════════════════════
+model AuditLog {
+  id          String   @id @default(cuid())
+  employeeId  String?
+  action      String   // CREATE, UPDATE, DELETE
+  entity      String   // e.g., "Job", "Booking", "SiteSetting"
+  entityId    String
+  details     Json?    // What was changed
+  createdAt   DateTime @default(now())
+
+  employee    Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
+  @@index([employeeId])
+  @@index([entity])
+}

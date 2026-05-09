@@ -1,0 +1,67 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+*.tsbuildinfo
+next-env.d.ts
+
+# env files (Security)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# large/temp files
+extracted_all.txt
+extracted_code.txt
+extracted_horizontal_dests.txt
+full_page.png
+temp_assets/
+recover.py
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Prisma
+/prisma/migrations
+
+# ═══ SECURITY: Never commit these ═══
+/scripts/
+*.secret
+*.key
+*.credentials
+*.p12
+*.pfx
+*.keystore
+
+# Downloaded/generated assets (scripts may write here)
+/public/assets/models/
+/temp/
+/tmp/
+*.glb.bak
+*.gltf.bak
+
+# Security scan reports (contain sensitive findings)
+gitleaks-report.*
+truffle-report.*
+*.sarif
