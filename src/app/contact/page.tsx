@@ -31,9 +31,22 @@ export default function ContactPage() {
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
   const [_branches, setBranches] = useState(branches);
+  const [company, setCompany] = useState<any>({
+    whatsapp: "96598765432",
+    phone: "+96598765432",
+    email: "info@alqadigroup.com",
+    address: "الكويت — مجمع القاضي",
+  });
+  const [cmsContact, setCmsContact] = useState<any>({
+    heroTitle: "تواصل معنا",
+    heroDesc: "نحن هنا لمساعدتك. تواصل مع فريق مجموعة القاضي الذهبية عبر أي من القنوات التالية.",
+    mapEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3476.8!2d47.97!3d29.38!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjnCsDIyJzQ4LjAiTiA0N8KwNTgnMTIuMCJF!5e0!3m2!1sar!2skw!4v1",
+  });
 
   useEffect(() => {
     fetch("/api/content").then(r => r.json()).then(data => {
+      if (data.company) setCompany((prev: any) => ({ ...prev, ...data.company }));
+      if (data.cms_contact) setCmsContact((prev: any) => ({ ...prev, ...data.cms_contact }));
       if (data.cms_contact?.branches) setBranches(data.cms_contact.branches);
     }).catch(() => {});
   }, []);
@@ -72,10 +85,10 @@ export default function ContactPage() {
         <motion.div {...reveal} className="relative z-10 mx-auto max-w-4xl px-6">
           <p className="text-xs tracking-[0.4em] text-gold-400">CONTACT US</p>
           <h1 className="mt-4 text-4xl font-black md:text-6xl" style={{ color: "var(--page-text)" }}>
-            تواصل <span className="text-gold-gradient">معنا</span>
+            {cmsContact.heroTitle}
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed" style={{ color: "var(--page-text-muted)" }}>
-            نحن هنا لمساعدتك. تواصل مع فريق مجموعة القاضي الذهبية عبر أي من القنوات التالية.
+            {cmsContact.heroDesc}
           </p>
         </motion.div>
       </section>
@@ -89,32 +102,32 @@ export default function ContactPage() {
               title: "واتساب",
               desc: "تواصل فوري على مدار الساعة",
               action: "ابدأ محادثة",
-              href: `https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "96598765432"}&text=مرحباً، أود الاستفسار`,
+              href: `https://api.whatsapp.com/send?phone=${company.whatsapp}&text=${encodeURIComponent("مرحباً، أود الاستفسار")}`,
               color: "from-emerald-600/20 to-emerald-400/10 border-emerald-500/25",
               iconColor: "text-emerald-400",
             },
             {
               icon: Phone,
               title: "اتصل بنا",
-              desc: process.env.NEXT_PUBLIC_PHONE_NUMBER || "+965 9876 5432",
+              desc: company.phone || "+965 9876 5432",
               action: "اتصل الآن",
-              href: `tel:${process.env.NEXT_PUBLIC_PHONE_NUMBER || "+96598765432"}`,
+              href: `tel:${company.phone || "+96598765432"}`,
               color: "from-blue-600/20 to-blue-400/10 border-blue-500/25",
               iconColor: "text-blue-400",
             },
             {
               icon: Mail,
               title: "البريد الإلكتروني",
-              desc: process.env.NEXT_PUBLIC_EMAIL || "info@alqadigroup.com",
+              desc: company.email || "info@alqadigroup.com",
               action: "أرسل رسالة",
-              href: `mailto:${process.env.NEXT_PUBLIC_EMAIL || "info@alqadigroup.com"}`,
+              href: `mailto:${company.email || "info@alqadigroup.com"}`,
               color: "from-gold-600/20 to-gold-400/10 border-gold-500/25",
               iconColor: "text-gold-400",
             },
             {
               icon: MapPin,
               title: "زُرنا",
-              desc: "الكويت — مجمع القاضي",
+              desc: company.address || "الكويت — مجمع القاضي",
               action: "عرض الخريطة",
               href: "https://maps.google.com/?q=Kuwait+City",
               color: "from-purple-600/20 to-purple-400/10 border-purple-500/25",
@@ -258,7 +271,7 @@ export default function ContactPage() {
             {/* Map */}
             <div className="overflow-hidden rounded-3xl border border-gold-500/15" style={{ background: "var(--page-surface)" }}>
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3476.8!2d47.97!3d29.38!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjnCsDIyJzQ4LjAiTiA0N8KwNTgnMTIuMCJF!5e0!3m2!1sar!2skw!4v1"
+                src={cmsContact.mapEmbed}
                 width="100%"
                 height="250"
                 style={{ border: 0 }}

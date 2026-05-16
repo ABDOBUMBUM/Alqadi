@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 // Helper to structure the JSON content
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || (session.user as any).role !== "admin") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const settings = await prisma.siteSetting.findMany();
     const dbContent: Record<string, any> = {};
 
@@ -62,6 +69,11 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || (session.user as any).role !== "admin") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const content = await req.json();
 
     const keysToUpdate = [
@@ -81,10 +93,14 @@ export async function POST(req: Request) {
       "cms_vip",
       "cms_home",
       "cms_travel",
+      "cms_hotels",
+      "cms_visa",
+      "cms_manpower",
     ];
 
     for (const key of keysToUpdate) {
-      if (content[key]) {
+      // Use "key in content" to allow clearing values (empty arrays/objects/null).
+      if (Object.prototype.hasOwnProperty.call(content, key)) {
         await prisma.siteSetting.upsert({
           where: { key },
           update: { value: content[key] },

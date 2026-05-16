@@ -12,7 +12,7 @@ const SESSION_KEY = "alqadi_portal_session";
 
 type Session = {
   name: string; username: string; role: string;
-  branch: string; shift: string; workLocation: string; loginTime: string;
+  branchId: string; branchName: string; shift: string; title: string; workLocation: string; loginTime: string;
 };
 
 const BRANCH_LABELS: Record<string, string> = {
@@ -57,13 +57,34 @@ export default function DashboardPage() {
   const [now, setNow] = useState("");
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SESSION_KEY);
-      if (!raw) { router.replace("/portal/login"); return; }
-      setSession(JSON.parse(raw));
-    } catch {
-      router.replace("/portal/login");
-    }
+    import("next-auth/react").then(({ getSession }) => {
+      getSession().then(sessionData => {
+        if (!sessionData?.user) {
+          router.replace("/portal/login");
+          return;
+        }
+        
+        // Merge NextAuth session with local extra info
+        const user = sessionData.user as any;
+        const localRaw = localStorage.getItem(SESSION_KEY);
+        let extraInfo: any = {};
+        if (localRaw) {
+          try { extraInfo = JSON.parse(localRaw); } catch { /* ignore */ }
+        }
+        
+        setSession({
+          name: user.name || "",
+          username: extraInfo.username || user.email || "",
+          role: user.role || "agent",
+          branchId: user.branchId || "",
+          branchName: user.branchName || "",
+          shift: user.shift || "",
+          title: user.title || "",
+          workLocation: extraInfo.workLocation || "office",
+          loginTime: extraInfo.loginTime || new Date().toISOString(),
+        } as Session);
+      });
+    });
 
     const tick = () => setNow(new Date().toLocaleTimeString("ar-YE", { hour: "2-digit", minute: "2-digit" }));
     tick();
@@ -72,8 +93,10 @@ export default function DashboardPage() {
   }, [router]);
 
   function logout() {
-    try { localStorage.removeItem(SESSION_KEY); } catch { /**/ }
-    router.replace("/portal/login");
+    import("next-auth/react").then(({ signOut }) => {
+      try { localStorage.removeItem(SESSION_KEY); } catch { /**/ }
+      signOut({ callbackUrl: "/portal/login" });
+    });
   }
 
   if (!session) return <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">جاري التحميل...</div>;
@@ -122,8 +145,8 @@ export default function DashboardPage() {
             <p className="font-semibold text-white">{session.name}</p>
             <p className="mt-0.5 text-white/40">@{session.username}</p>
             <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-white/30">
-              <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{BRANCH_LABELS[session.branch] ?? session.branch}</span>
-              <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{SHIFT_LABELS[session.shift] ?? session.shift}</span>
+              <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{session.branchName}</span>
+              <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{session.shift}</span>
               <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{session.workLocation === "office" ? "المكتب" : "منزل"}</span>
             </div>
           </div>
@@ -171,7 +194,7 @@ export default function DashboardPage() {
           <div className="rounded-2xl border border-gold-500/15 bg-gradient-to-l from-gold-500/5 to-transparent p-5">
             <p className="text-lg font-bold text-white">مرحباً، {session.name} 👋</p>
             <p className="text-sm text-white/40">
-              {session.role === "supervisor" ? "🔑 مشرف" : "📋 موظف حجز"} — {BRANCH_LABELS[session.branch]} — {SHIFT_LABELS[session.shift]}
+              {session.title || (session.role === "supervisor" ? "مشرف" : "موظف")} — {session.branchName} — {session.shift}
             </p>
           </div>
 

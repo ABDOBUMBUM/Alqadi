@@ -6,6 +6,7 @@ import {
   Phone, Mail, MapPin, Globe2, MessageCircle,
   Plane, Hotel, Users, Briefcase, ChevronUp,
 } from "lucide-react";
+import { useSiteContent } from "@/hooks/useSiteContent";
 
 const footerSections = [
   {
@@ -39,6 +40,16 @@ const footerSections = [
 
 export function SiteFooter() {
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+  const { content } = useSiteContent();
+
+  const company = content?.company || {};
+  const phone = company.phone || "+965 9876 5432";
+  const whatsapp = company.whatsapp || "96598765432";
+  const email = company.email || "info@alqadigroup.com";
+  const address = company.address || "الكويت — مجمع القاضي، شارع الخليج العربي";
+  const aboutShort =
+    content?.cms_home?.footerAbout ||
+    "مجموعة القاضي الذهبية — أكثر من 45 عاماً من التميز في خدمات السفريات والسياحة والأيادي العاملة.";
 
   return (
     <footer
@@ -65,38 +76,37 @@ export function SiteFooter() {
               />
             </Link>
             <p className="mt-4 max-w-sm text-sm leading-relaxed" style={{ color: "var(--page-text-muted)" }}>
-              مجموعة القاضي الذهبية — أكثر من 45 عاماً من التميز في خدمات السفريات والسياحة والأيادي العاملة.
-              نخدم أكثر من 860,000 عميل في أكثر من 75 دولة حول العالم.
+              {aboutShort}
             </p>
 
             {/* Contact Info */}
             <div className="mt-6 space-y-3">
               <a
-                href={`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "96598765432"}`}
+                href={`https://api.whatsapp.com/send?phone=${whatsapp}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 text-sm transition-colors hover:text-gold-400"
               >
                 <MessageCircle className="h-4 w-4 text-gold-400" />
-                واتساب: {process.env.NEXT_PUBLIC_PHONE_NUMBER || "+965 9876 5432"}
+                واتساب: {phone}
               </a>
               <a
-                href={`tel:${process.env.NEXT_PUBLIC_PHONE_NUMBER || "+96598765432"}`}
+                href={`tel:${phone}`}
                 className="flex items-center gap-3 text-sm transition-colors hover:text-gold-400"
               >
                 <Phone className="h-4 w-4 text-gold-400" />
-                {process.env.NEXT_PUBLIC_PHONE_NUMBER || "+965 9876 5432"}
+                {phone}
               </a>
               <a
-                href={`mailto:${process.env.NEXT_PUBLIC_EMAIL || "info@alqadigroup.com"}`}
+                href={`mailto:${email}`}
                 className="flex items-center gap-3 text-sm transition-colors hover:text-gold-400"
               >
                 <Mail className="h-4 w-4 text-gold-400" />
-                {process.env.NEXT_PUBLIC_EMAIL || "info@alqadigroup.com"}
+                {email}
               </a>
               <p className="flex items-center gap-3 text-sm">
                 <MapPin className="h-4 w-4 text-gold-400" />
-                الكويت — مجمع القاضي، شارع الخليج العربي
+                {address}
               </p>
             </div>
           </div>

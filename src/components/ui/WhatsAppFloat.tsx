@@ -3,10 +3,14 @@
 import { MessageCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { MagneticButton } from "./MagneticButton";
+import { useSiteContent } from "@/hooks/useSiteContent";
 
 export function WhatsAppFloat() {
-  const WHATSAPP_NUMBER = "96598765432"; // Replace with actual
-  const MESSAGE = "مرحباً مجموعة القاضي، أود الاستفسار عن باقات السفر.";
+  const { content } = useSiteContent();
+  const WHATSAPP_NUMBER = content?.company?.whatsapp || "96598765432";
+  const MESSAGE =
+    content?.cms_home?.whatsappMessage ||
+    "مرحباً مجموعة القاضي، أود الاستفسار عن باقات السفر.";
   
   const href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(MESSAGE)}`;
 
@@ -23,7 +27,7 @@ export function WhatsAppFloat() {
           color: "var(--page-text)",
         }}
       >
-        كيف يمكننا مساعدتك اليوم؟ 👋
+        {content?.cms_home?.whatsappHint || "كيف يمكننا مساعدتك اليوم؟"}
       </motion.div>
       
       <MagneticButton>

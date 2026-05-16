@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { RefreshCw, Plus, Trash2, CheckCircle, XCircle } from "lucide-react";
 
-export function ApiIntegrationsSection() {
+export function ApiIntegrationsSection({ isDark }: { isDark?: boolean }) {
   const [apis, setApis] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [testResult, setTestResult] = useState<Record<string, any>>({});

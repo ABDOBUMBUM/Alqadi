@@ -5,8 +5,47 @@ import { motion } from "framer-motion";
 import { Plane, ShieldCheck, Map, Clock } from "lucide-react";
 import { TextReveal } from "@/components/ui/TextReveal";
 import { MagneticButton } from "@/components/ui/MagneticButton";
+import { useEffect, useState } from "react";
+
+type HeroStat = { label?: string; sub?: string };
+type HomeCms = {
+  heroBadge?: string;
+  heroMainTitle?: string;
+  heroMainSubtitle?: string;
+  heroMainImage?: string;
+  heroPrimaryCtaLabel?: string;
+  heroPrimaryCtaHref?: string;
+  heroSecondaryCtaLabel?: string;
+  heroSecondaryCtaHref?: string;
+  heroStats?: HeroStat[];
+};
+type HeroText = {
+  company?: { nameAr?: string };
+  cms_home?: HomeCms;
+};
 
 export function Hero3D() {
+  const [homeCms, setHomeCms] = useState<HomeCms | null>(null);
+
+  useEffect(() => {
+    fetch("/api/content")
+      .then((r) => r.json())
+      .then((data: HeroText) => setHomeCms(data.cms_home || null))
+      .catch(() => setHomeCms(null));
+  }, []);
+
+  const source = Array.isArray(homeCms?.heroStats) && homeCms?.heroStats?.length
+    ? homeCms.heroStats
+    : [
+        { label: "حجوزات طيران", sub: "أفضل الأسعار" },
+        { label: "خدمات متكاملة", sub: "حلول شاملة" },
+        { label: "برامج سياحية", sub: "تجارب فريدة" },
+        { label: "دعم 24/7", sub: "خدمة عملاء" },
+      ];
+  const stats = source.slice(0, 4);
+
+  const text = (value: string | undefined, fallback: string) => value || fallback;
+
   return (
     <section
       className="relative min-h-screen overflow-hidden bg-black"
@@ -17,8 +56,8 @@ export function Hero3D() {
       ══════════════════════════════════════════════ */}
       <div className="absolute inset-0 z-0">
         <Image
-          src="/assets/background.jpg"
-          alt="مجموعة القاضي الذهبية"
+          src={text(homeCms?.heroMainImage, "/assets/background.jpg")}
+          alt={text(homeCms?.heroMainTitle, "مجموعة القاضي الذهبية")}
           fill
           priority
           sizes="100vw"
@@ -36,7 +75,7 @@ export function Hero3D() {
           transition={{ duration: 0.7, delay: 0.4 }}
           className="inline-block px-5 py-2 rounded-full border border-gold-500/30 bg-gold-500/10 text-gold-400 text-xs font-bold tracking-widest uppercase backdrop-blur-md"
         >
-          مجموعة القاضي الذهبية · الكويت
+          {text(homeCms?.heroBadge, "مجموعة القاضي الذهبية · الكويت")}
         </motion.span>
       </div>
 
@@ -69,7 +108,7 @@ export function Hero3D() {
               }}
             >
               <TextReveal
-                text="سافر بثقة · نرتقي بتجربتك"
+                text={text(homeCms?.heroMainTitle, "سافر بثقة · نرتقي بتجربتك")}
                 className="justify-center text-transparent bg-clip-text"
                 style={{
                   background:
@@ -85,7 +124,7 @@ export function Hero3D() {
               className="mt-3 text-white/60 max-w-2xl mx-auto"
               style={{ fontSize: "clamp(0.9rem, 1.4vw, 1.1rem)" }}
             >
-              مجموعة القاضي الذهبية للسفريات والسياحة — تجارب سفر استثنائية بأعلى معايير الفخامة والاحترافية.
+              {text(homeCms?.heroMainSubtitle, "مجموعة القاضي الذهبية للسفريات والسياحة — تجارب سفر استثنائية بأعلى معايير الفخامة والاحترافية.")}
             </p>
           </motion.div>
 
@@ -97,14 +136,14 @@ export function Hero3D() {
             className="flex flex-wrap justify-center gap-4 mb-8"
           >
             <MagneticButton>
-              <a href="#booking" className="btn-gold pointer-events-auto inline-flex items-center gap-2">
+              <a href={text(homeCms?.heroPrimaryCtaHref, "#booking")} className="btn-gold pointer-events-auto inline-flex items-center gap-2">
                 <Plane className="w-4 h-4" />
-                <span>احجز رحلتك الآن</span>
+                <span>{text(homeCms?.heroPrimaryCtaLabel, "احجز رحلتك الآن")}</span>
               </a>
             </MagneticButton>
             <MagneticButton>
-              <a href="#services" className="btn-ghost-gold pointer-events-auto inline-flex items-center gap-2">
-                <span>استكشف خدماتنا</span>
+              <a href={text(homeCms?.heroSecondaryCtaHref, "#services")} className="btn-ghost-gold pointer-events-auto inline-flex items-center gap-2">
+                <span>{text(homeCms?.heroSecondaryCtaLabel, "استكشف خدماتنا")}</span>
               </a>
             </MagneticButton>
           </motion.div>
@@ -116,12 +155,10 @@ export function Hero3D() {
             transition={{ duration: 0.7, delay: 1.1 }}
             className="grid grid-cols-2 md:grid-cols-4 gap-3 pointer-events-auto"
           >
-            {[
-              { label: "حجوزات طيران", sub: "أفضل الأسعار", icon: Plane },
-              { label: "خدمات متكاملة", sub: "حلول شاملة", icon: ShieldCheck },
-              { label: "برامج سياحية", sub: "تجارب فريدة", icon: Map },
-              { label: "دعم 24/7", sub: "خدمة عملاء", icon: Clock },
-            ].map((item, i) => (
+            {stats.map((item, i) => {
+              const icons = [Plane, ShieldCheck, Map, Clock];
+              const Icon = icons[i % icons.length];
+              return (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 12 }}
@@ -138,14 +175,15 @@ export function Hero3D() {
                   className="rounded-xl p-2 text-gold-400 shrink-0"
                   style={{ background: "rgba(201,162,39,0.12)" }}
                 >
-                  <item.icon className="w-4 h-4" />
+                  <Icon className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-white leading-tight">{item.label}</p>
-                  <p className="text-[10px] text-white/40">{item.sub}</p>
+                  <p className="text-xs font-bold text-white leading-tight">{item.label || ""}</p>
+                  <p className="text-[10px] text-white/40">{item.sub || ""}</p>
                 </div>
               </motion.div>
-            ))}
+              );
+            })}
           </motion.div>
         </div>
       </div>

@@ -1,29 +1,47 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { jobs } from "../data";
 import { MapPin, DollarSign, Briefcase, Calendar, Building2, CheckCircle2, MessageCircle, ChevronLeft } from "lucide-react";
+import { prisma } from "@/lib/prisma";
 
 type Props = { params: Promise<{ jobId: string }> };
 
 export async function generateStaticParams() {
-  return jobs.map((j) => ({ jobId: j.id }));
+  return [];
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { jobId } = await params;
-  const job = jobs.find((j) => j.id === jobId);
+  const job = await prisma.job.findUnique({ where: { id: jobId } });
   if (!job) return { title: "وظيفة غير موجودة" };
   return {
-    title: `${job.title} — ${job.company} | مجموعة القاضي`,
-    description: job.desc,
+    title: `${job.title} — مجموعة القاضي | مجموعة القاضي`,
+    description: job.description || "",
     alternates: { canonical: `/services/manpower/${job.id}` },
   };
 }
 
 export default async function JobDetailPage({ params }: Props) {
   const { jobId } = await params;
-  const job = jobs.find((j) => j.id === jobId);
+  const dbJob = await prisma.job.findUnique({ where: { id: jobId } });
+  const companySetting = await prisma.siteSetting.findUnique({ where: { key: "company" } });
+  const waPhone = String((companySetting?.value as any)?.whatsapp || "96598765432");
+  const job: any = dbJob
+    ? {
+        id: dbJob.id,
+        title: dbJob.title,
+        company: "مجموعة القاضي للتوظيف",
+        location: dbJob.country,
+        salary: `${dbJob.salary} ${dbJob.currency}`,
+        type: "دوام كامل",
+        category: dbJob.category,
+        posted: "متاح للتقديم",
+        urgent: false,
+        desc: dbJob.description || "",
+        requirements: Array.isArray(dbJob.requirements) ? dbJob.requirements : [],
+      }
+    : null;
+
   if (!job) notFound();
 
   // JobPosting JSON-LD
@@ -53,7 +71,7 @@ export default async function JobDetailPage({ params }: Props) {
     applicantLocationRequirements: { "@type": "Country", name: "KW" },
   };
 
-  const waLink = `https://api.whatsapp.com/send?phone=96598765432&text=${encodeURIComponent(
+  const waLink = `https://api.whatsapp.com/send?phone=${waPhone}&text=${encodeURIComponent(
     `مرحباً، أود التقدم لوظيفة: ${job.title} في ${job.company}`
   )}`;
 
@@ -114,7 +132,7 @@ export default async function JobDetailPage({ params }: Props) {
           <div className="mt-6 rounded-3xl border border-gold-500/15 bg-white/[0.02] p-8">
             <h2 className="text-xl font-bold text-white">المتطلبات</h2>
             <ul className="mt-4 space-y-3">
-              {job.requirements.map((req) => (
+              {job.requirements.map((req: string) => (
                 <li key={req} className="flex items-center gap-3 text-white/65">
                   <CheckCircle2 className="h-5 w-5 shrink-0 text-gold-400" />
                   {req}

@@ -2,108 +2,58 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { Lock, User, MapPin, Clock, Building2, Plane, AlertCircle } from "lucide-react";
 
-// Same storage key used by the admin panel
-const STORAGE_KEY = "alqadi_admin_content";
-const SESSION_KEY = "alqadi_portal_session";
-
-type Employee = {
-  name: string;
-  username: string;
-  password: string;
-  phone: string;
-  role: string;
-  branch: string;
-  shift: string;
-  active: boolean;
-};
-
-async function loadEmployees(): Promise<Employee[]> {
-  try {
-    const res = await fetch("/api/admin/content");
-    if (res.ok) {
-      const data = await res.json();
-      return data.employees ?? [];
-    }
-  } catch { /* ignore */ }
-  // Fallback defaults — passwords are masked; real auth should come from the API/DB
-  return [
-    { name: "أحمد القاضي", username: "ahmed.alqadi", password: "", phone: "", role: "supervisor", branch: "hq", shift: "morning", active: true },
-    { name: "محمد علي", username: "mohammed.ali", password: "", phone: "", role: "booking", branch: "sanaa", shift: "morning", active: true },
-    { name: "عبدالله سعيد", username: "abdallah.saeed", password: "", phone: "", role: "booking", branch: "sanafer", shift: "evening", active: true },
-  ];
-}
-
-const BRANCHES: Record<string, string> = {
-  hq: "الإدارة العامة",
-  sanaa: "فرع صنعاء",
-  sanafer: "عدن - السنافر",
-  mansoura: "عدن - المنصورة (فلاي مي)",
-  khormaksar: "عدن - خور مكسر",
-};
+// Removed static branches as it is dynamically loaded from the employee profile in DB
 
 export default function PortalLogin() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [branch, setBranch] = useState("");
-  const [shift, setShift] = useState("");
   const [workLocation, setWorkLocation] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
 
-    setTimeout(async () => {
-      const employees = await loadEmployees();
+    try {
+      const result = await signIn("credentials", {
+        redirect: false,
+        username: username.trim(),
+        password,
+      });
 
-      // Find employee by username (case-insensitive)
-      const emp = employees.find(
-        (e) => e.username?.toLowerCase() === username.trim().toLowerCase()
-      );
-
-      if (!emp) {
-        setError("اسم المستخدم غير موجود في النظام.");
+      if (result?.error) {
+        setError(result.error);
         setIsLoading(false);
         return;
       }
 
-      if (!emp.active) {
-        setError("هذا الحساب موقوف. تواصل مع مدير النظام.");
-        setIsLoading(false);
-        return;
-      }
+      if (result?.ok) {
+        // Save extra session metadata to localStorage (branch/shift/location)
+        try {
+          localStorage.setItem("alqadi_portal_session", JSON.stringify({
+            username: username.trim(),
+            workLocation,
+            loginTime: new Date().toISOString(),
+          }));
+        } catch { /* ignore */ }
 
-      if (emp.password !== password) {
-        setError("كلمة المرور غير صحيحة.");
-        setIsLoading(false);
-        return;
+        // Redirect based on intended destination or dashboard
+        const params = new URLSearchParams(window.location.search);
+        const next = params.get("next");
+        router.push(next || "/admin");
+        router.refresh();
       }
-
-      // Save session to localStorage
-      try {
-        localStorage.setItem(SESSION_KEY, JSON.stringify({
-          name: emp.name,
-          username: emp.username,
-          role: emp.role,
-          branch: branch || emp.branch,
-          shift: shift || emp.shift,
-          workLocation,
-          loginTime: new Date().toISOString(),
-        }));
-      } catch { /* ignore */ }
-
-      // Route based on role
-      if (emp.role === "supervisor") {
-        router.push("/portal/dashboard");
-      } else {
-        router.push("/portal/workspace");
-      }
-    }, 1000);
+    } catch {
+      setError("خطأ في الاتصال بالخادم. حاول مرة أخرى.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -174,47 +124,7 @@ export default function PortalLogin() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              {/* Branch */}
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                  <Building2 className="h-4 w-4 text-slate-400" />
-                </div>
-                <select
-                  suppressHydrationWarning
-                  value={branch}
-                  onChange={e => setBranch(e.target.value)}
-                  required
-                  className="w-full appearance-none rounded-xl border border-white/10 bg-slate-800/80 py-3 pl-4 pr-10 text-xs text-white outline-none transition-all focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/50"
-                  dir="rtl"
-                >
-                  <option value="" disabled>الفرع...</option>
-                  {Object.entries(BRANCHES).map(([id, label]) => (
-                    <option key={id} value={id}>{label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Shift */}
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                  <Clock className="h-4 w-4 text-slate-400" />
-                </div>
-                <select
-                  suppressHydrationWarning
-                  value={shift}
-                  onChange={e => setShift(e.target.value)}
-                  required
-                  className="w-full appearance-none rounded-xl border border-white/10 bg-slate-800/80 py-3 pl-4 pr-10 text-xs text-white outline-none transition-all focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/50"
-                  dir="rtl"
-                >
-                  <option value="" disabled>الشفت...</option>
-                  <option value="morning">صباحي</option>
-                  <option value="evening">مسائي</option>
-                  <option value="night">ليلي</option>
-                </select>
-              </div>
-            </div>
+            <div className="grid grid-cols-1 gap-3">
 
             {/* Work Location */}
             <div className="relative">
@@ -225,14 +135,14 @@ export default function PortalLogin() {
                 suppressHydrationWarning
                 value={workLocation}
                 onChange={e => setWorkLocation(e.target.value)}
-                required
                 className="w-full appearance-none rounded-xl border border-white/10 bg-slate-800/80 py-3 pl-4 pr-10 text-sm text-white outline-none transition-all focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/50"
                 dir="rtl"
               >
-                <option value="" disabled>مكان العمل الحالي...</option>
+                <option value="">مكان العمل الحالي...</option>
                 <option value="office">من المكتب (On-site)</option>
                 <option value="home">من المنزل (Remote)</option>
               </select>
+            </div>
             </div>
 
             {/* Submit */}

@@ -45,6 +45,7 @@ export default function RootLayout({
     <html
       lang="ar"
       dir="rtl"
+      suppressHydrationWarning
       className={cn("h-full", "antialiased", cairo.variable, cormorant.variable, "font-sans", geist.variable)}
     >
       <head>

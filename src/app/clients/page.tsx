@@ -77,13 +77,25 @@ export default function ClientsPage() {
   const [_clients, setClients] = useState(clients);
   const [_testimonials, setTestimonials] = useState(testimonials);
   const [_whyUs, setWhyUs] = useState(whyUs);
+  const [heroTitle, setHeroTitle] = useState("شركاء النجاح");
+  const [heroDesc, setHeroDesc] = useState("نفخر بثقة أكثر من 860,000 عميل — من كبرى الشركات والمؤسسات في الكويت والمنطقة — منذ عام 1980.");
+  const [ctaTitle, setCtaTitle] = useState("انضم إلى عائلة القاضي");
+  const [ctaDesc, setCtaDesc] = useState("تواصل معنا لمناقشة احتياجات شركتك ونضع لك حلاً مخصصاً لإدارة سفر موظفيك.");
+  const [waPhone, setWaPhone] = useState("96598765432");
+  const [ctaWaMsg, setCtaWaMsg] = useState("مرحباً، أود الاستفسار عن خدمات الشركات");
 
   useEffect(() => {
     fetch("/api/content").then(r => r.json()).then(data => {
+      if (data.company?.whatsapp) setWaPhone(String(data.company.whatsapp));
       if (data.cms_clients?.stats) setStats(data.cms_clients.stats);
       if (data.cms_clients?.clients) setClients(data.cms_clients.clients);
       if (data.cms_clients?.testimonials) setTestimonials(data.cms_clients.testimonials);
       if (data.cms_clients?.whyUs) setWhyUs(data.cms_clients.whyUs);
+      if (data.cms_clients?.heroTitle) setHeroTitle(data.cms_clients.heroTitle);
+      if (data.cms_clients?.heroDesc) setHeroDesc(data.cms_clients.heroDesc);
+      if (data.cms_clients?.ctaTitle) setCtaTitle(data.cms_clients.ctaTitle);
+      if (data.cms_clients?.ctaDesc) setCtaDesc(data.cms_clients.ctaDesc);
+      if (data.cms_clients?.ctaWhatsappMessage) setCtaWaMsg(data.cms_clients.ctaWhatsappMessage);
     }).catch(() => {});
   }, []);
 
@@ -101,10 +113,10 @@ export default function ClientsPage() {
         <motion.div {...reveal} className="relative z-10 mx-auto max-w-4xl px-6">
           <p className="text-xs tracking-[0.4em] text-gold-400">OUR CLIENTS</p>
           <h1 className="mt-4 text-4xl font-black md:text-6xl" style={{ color: "var(--page-text)" }}>
-            شركاء <span className="text-gold-gradient">النجاح</span>
+            {heroTitle}
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed" style={{ color: "var(--page-text-muted)" }}>
-            نفخر بثقة أكثر من 860,000 عميل — من كبرى الشركات والمؤسسات في الكويت والمنطقة — منذ عام 1980.
+            {heroDesc}
           </p>
         </motion.div>
       </section>
@@ -255,13 +267,11 @@ export default function ClientsPage() {
           {...reveal}
           className="rounded-3xl border border-gold-500/25 bg-gradient-to-r from-gold-500/10 to-transparent p-10"
         >
-          <h2 className="text-2xl font-bold text-white md:text-3xl">انضم إلى عائلة القاضي</h2>
-          <p className="mt-3 text-white/55">
-            تواصل معنا لمناقشة احتياجات شركتك ونضع لك حلاً مخصصاً لإدارة سفر موظفيك.
-          </p>
+          <h2 className="text-2xl font-bold text-white md:text-3xl">{ctaTitle}</h2>
+          <p className="mt-3 text-white/55">{ctaDesc}</p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <a
-              href="https://api.whatsapp.com/send?phone=96598765432&text=مرحباً، أود الاستفسار عن خدمات الشركات"
+              href={`https://api.whatsapp.com/send?phone=${waPhone}&text=${encodeURIComponent(ctaWaMsg)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-gold gap-2"

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getCmsData } from "@/lib/cms";
+import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -30,6 +31,18 @@ const values = [
   { icon: Globe2, title: "الانتشار العالمي", desc: "شبكة شراكات استراتيجية في 75+ دولة تضمن أفضل الخدمات." },
 ];
 
+/* Map CMS icon-name strings → actual Lucide components */
+const iconMap: Record<string, any> = {
+  Plane, Hotel, Globe2, Briefcase, ShieldCheck, Star, Users, Award,
+  Building2, MessageCircle, Phone, MapPin, Clock, Target, Eye, BadgeCheck,
+  plane: Plane, hotel: Hotel, visa: Globe2, manpower: Briefcase,
+};
+function resolveIcon(icon: any, fallback: any = Globe2) {
+  if (typeof icon === "function") return icon;          // already a component
+  if (typeof icon === "string") return iconMap[icon] ?? fallback;
+  return fallback;
+}
+
 const services = [
   { icon: Plane, title: "السفريات والسياحة", desc: "حجوزات طيران وبرامج سياحية مخصصة لأكثر من 150 وجهة عالمية.", href: "/services/travel" },
   { icon: Hotel, title: "حجوزات الفنادق", desc: "فنادق 4 و5 نجوم بأسعار حصرية مع ضمان أفضل سعر.", href: "/services/hotels" },
@@ -48,18 +61,28 @@ const stats = [
 
 export default async function AboutPage() {
   const cms = await getCmsData("cms_about");
-  const _milestones = cms?.milestones ?? milestones;
-  const _values = cms?.values ?? values;
-  const _stats = cms?.stats ?? stats;
-  const _vision = cms?.vision ?? "أن نكون المجموعة الرائدة إقليمياً في خدمات السفر والسياحة والأيادي العاملة، من خلال تقديم تجارب استثنائية تُلهم العالم وتربط الثقافات وتُحقق أحلام عملائنا.";
-  const _mission = cms?.mission ?? "تمكين عملائنا من استكشاف العالم بثقة وراحة، من خلال حلول سفر متكاملة تجمع بين الخبرة العميقة والتقنية الحديثة وخدمة العملاء الاستثنائية على مدار الساعة.";
-  const _branches = cms?.branches ?? [
-    { name: "الإدارة العامة", location: "الكويت — شارع الخليج العربي", hours: "8:00 ص - 5:00 م" },
-    { name: "فرع صنعاء", location: "صنعاء — شارع الزبيري", hours: "8:00 ص - 6:00 م" },
-    { name: "فرع عدن — السنافر", location: "عدن — المعلا", hours: "8:00 ص - 6:00 م" },
-    { name: "فرع عدن — المنصورة (فلاي مي)", location: "عدن — المنصورة", hours: "8:00 ص - 6:00 م" },
-    { name: "فرع عدن — خور مكسر", location: "عدن — خور مكسر", hours: "8:00 ص - 6:00 م" },
-  ];
+  const companySetting = await prisma.siteSetting.findUnique({ where: { key: "company" } });
+  const branchesDb = await prisma.branch.findMany({ where: { active: true }, orderBy: { createdAt: "desc" } });
+  const company = (companySetting?.value as any) || {};
+  const waPhone = String(company.whatsapp || "96598765432");
+  const phone = String(company.phone || "+96598765432");
+  const _heroTitle = cms?.heroTitle ?? company.nameAr ?? "";
+  const _heroDesc = cms?.heroDesc ?? "";
+  const _services = Array.isArray(cms?.services) ? cms.services : services;
+  const _milestones = Array.isArray(cms?.milestones) ? cms.milestones : milestones;
+  const _values = Array.isArray(cms?.values) ? cms.values : values;
+  const _stats = Array.isArray(cms?.stats)
+    ? cms.stats
+    : [
+        { value: company.clients ?? "", label: "العملاء" },
+        { value: company.experience ?? "", label: "سنوات الخبرة" },
+        { value: company.countries ?? "", label: "الدول" },
+      ];
+  const _vision = cms?.vision ?? "";
+  const _mission = cms?.mission ?? "";
+  const _branches = branchesDb.length > 0
+    ? branchesDb.map((b) => ({ name: b.name, location: b.address || b.city, hours: "8:00 ص - 6:00 م" }))
+    : (cms?.branches ?? []);
   return (
     <div className="relative min-h-screen pt-28 marble-bg" style={{ color: "var(--page-text)" }}>
 
@@ -74,12 +97,10 @@ export default async function AboutPage() {
         <div className="relative z-10 mx-auto max-w-4xl px-6">
           <p className="text-xs tracking-[0.4em] text-gold-400">ABOUT US — من نحن</p>
           <h1 className="mt-4 text-4xl font-black md:text-6xl" style={{ color: "var(--page-text)" }}>
-            مجموعة القاضي{" "}
-            <span className="text-gold-gradient">الذهبية</span>
+            {_heroTitle}
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed" style={{ color: "var(--page-text-muted)" }}>
-            منذ عام 1980، نقدّم لعملائنا خدمات سفر وسياحة وتوظيف استثنائية بمعايير دولية.
-            رحلتنا بدأت بحلم صغير وتحولت إلى مجموعة رائدة تخدم أكثر من 860,000 عميل في 75+ دولة.
+            {_heroDesc}
           </p>
         </div>
       </section>
@@ -111,7 +132,7 @@ export default async function AboutPage() {
               <div className="mb-4 inline-flex rounded-xl border border-gold-500/30 bg-gold-500/10 p-3 text-gold-300">
                 <Eye className="h-6 w-6" />
               </div>
-              <h2 className="text-2xl font-bold" style={{ color: "var(--page-text)" }}>رؤيتنا</h2>
+              <h2 className="text-2xl font-bold" style={{ color: "var(--page-text)" }}>{cms?.visionTitle || "رؤيتنا"}</h2>
               <p className="mt-4 leading-relaxed" style={{ color: "var(--page-text-muted)" }}>
                 {_vision}
               </p>
@@ -120,7 +141,7 @@ export default async function AboutPage() {
               <div className="mb-4 inline-flex rounded-xl border border-gold-500/30 bg-gold-500/10 p-3 text-gold-300">
                 <Target className="h-6 w-6" />
               </div>
-              <h2 className="text-2xl font-bold" style={{ color: "var(--page-text)" }}>مهمتنا</h2>
+              <h2 className="text-2xl font-bold" style={{ color: "var(--page-text)" }}>{cms?.missionTitle || "مهمتنا"}</h2>
               <p className="mt-4 leading-relaxed" style={{ color: "var(--page-text-muted)" }}>
                 {_mission}
               </p>
@@ -134,7 +155,7 @@ export default async function AboutPage() {
         <div className="mb-12 text-center">
           <p className="text-xs tracking-[0.35em] text-gold-400">OUR VALUES</p>
           <h2 className="mt-4 text-3xl font-bold md:text-4xl" style={{ color: "var(--page-text)" }}>
-            قيمنا الأساسية
+            {cms?.valuesTitle || "قيمنا الأساسية"}
           </h2>
         </div>
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
@@ -147,9 +168,11 @@ export default async function AboutPage() {
                 borderColor: "rgba(201,162,39,0.15)",
               }}
             >
+              {(() => { const Icon = resolveIcon(item.icon, ShieldCheck); return (
               <div className="mx-auto mb-4 inline-flex rounded-xl border border-gold-500/30 bg-gold-500/10 p-3 text-gold-300">
-                <ShieldCheck className="h-6 w-6" />
+                <Icon className="h-6 w-6" />
               </div>
+              ); })()}
               <h3 className="font-bold" style={{ color: "var(--page-text)" }}>{item.title}</h3>
               <p className="mt-2 text-sm" style={{ color: "var(--page-text-muted)" }}>{item.desc}</p>
             </div>
@@ -163,7 +186,7 @@ export default async function AboutPage() {
           <div className="mb-12 text-center">
             <p className="text-xs tracking-[0.35em] text-gold-400">OUR JOURNEY</p>
             <h2 className="mt-4 text-3xl font-bold md:text-4xl" style={{ color: "var(--page-text)" }}>
-              مسيرتنا عبر السنوات
+              {cms?.milestonesTitle || "مسيرتنا عبر السنوات"}
             </h2>
           </div>
           <div className="relative space-y-8">
@@ -194,11 +217,11 @@ export default async function AboutPage() {
         <div className="mb-12 text-center">
           <p className="text-xs tracking-[0.35em] text-gold-400">OUR SERVICES</p>
           <h2 className="mt-4 text-3xl font-bold md:text-4xl" style={{ color: "var(--page-text)" }}>
-            خدماتنا المتميزة
+            {cms?.servicesTitle || "خدماتنا المتميزة"}
           </h2>
         </div>
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          {services.map((s) => (
+          {_services.map((s: any) => (
             <Link
               key={s.title}
               href={s.href}
@@ -208,9 +231,11 @@ export default async function AboutPage() {
                 borderColor: "rgba(201,162,39,0.18)",
               }}
             >
+              {(() => { const Icon = resolveIcon(s.icon, Globe2); return (
               <div className="mb-4 inline-flex rounded-xl border border-gold-500/30 bg-gold-500/10 p-3 text-gold-300">
-                <s.icon className="h-6 w-6" />
+                <Icon className="h-6 w-6" />
               </div>
+              ); })()}
               <h3 className="font-bold transition-colors group-hover:text-gold-300" style={{ color: "var(--page-text)" }}>
                 {s.title}
               </h3>
@@ -226,7 +251,7 @@ export default async function AboutPage() {
           <div className="mb-12 text-center">
             <p className="text-xs tracking-[0.35em] text-gold-400">OUR BRANCHES</p>
             <h2 className="mt-4 text-3xl font-bold" style={{ color: "var(--page-text)" }}>
-              فروعنا
+              {cms?.branchesTitle || "فروعنا"}
             </h2>
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -261,24 +286,24 @@ export default async function AboutPage() {
           style={{ borderColor: "rgba(201,162,39,0.25)", background: "linear-gradient(90deg, rgba(201,162,39,0.12) 0%, transparent 70%)" }}
         >
           <h2 className="text-2xl font-bold md:text-3xl" style={{ color: "var(--page-text)" }}>
-            جاهز لبدء رحلتك معنا؟
+            {cms?.ctaTitle || "جاهز لبدء رحلتك معنا؟"}
           </h2>
           <p className="mt-3" style={{ color: "var(--page-text-muted)" }}>
-            تواصل مع فريقنا واحصل على استشارة مجانية لرحلتك القادمة.
+            {cms?.ctaDesc || "تواصل مع فريقنا واحصل على استشارة مجانية لرحلتك القادمة."}
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <a
-              href={`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "96598765432"}&text=مرحباً، أود الاستفسار عن خدماتكم`}
+              href={`https://api.whatsapp.com/send?phone=${waPhone}&text=${encodeURIComponent("مرحباً، أود الاستفسار عن خدماتكم")}`}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-gold gap-2"
             >
               <MessageCircle className="h-4 w-4" />
-              تواصل عبر واتساب
+              {cms?.ctaBtnWhatsapp || "تواصل عبر واتساب"}
             </a>
-            <a href={`tel:${process.env.NEXT_PUBLIC_PHONE_NUMBER || "+96598765432"}`} className="btn-ghost-gold gap-2">
+            <a href={`tel:${phone}`} className="btn-ghost-gold gap-2">
               <Phone className="h-4 w-4" />
-              اتصل بنا
+              {cms?.ctaBtnCall || "اتصل بنا"}
             </a>
           </div>
         </div>

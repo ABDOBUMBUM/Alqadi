@@ -44,9 +44,20 @@ const packages = [
 ];
 
 import { useCurrency } from "@/context/CurrencyContext";
+import { useState, useEffect } from "react";
 
 export function PricingSection() {
   const { formatPrice } = useCurrency();
+  const [waPhone, setWaPhone] = useState("96598765432");
+
+  useEffect(() => {
+    fetch("/api/content")
+      .then(res => res.json())
+      .then(data => {
+        if (data.company?.whatsapp) setWaPhone(String(data.company.whatsapp));
+      })
+      .catch(() => {});
+  }, []);
   return (
     <section
       id="pricing"
@@ -131,23 +142,29 @@ export function PricingSection() {
 
               <div className="mt-auto pt-4 flex justify-center">
                 <MagneticButton>
-                  <button suppressHydrationWarning className={`w-full py-3 rounded-full font-bold transition-all ${
-                    pkg.popular
-                      ? "bg-gradient-to-r from-gold-600 to-gold-400 text-black hover:shadow-[0_0_20px_rgba(201,168,76,0.4)]"
-                      : "hover:bg-gold-500/10"
-                  }`}
-                  style={
-                    pkg.popular
-                      ? undefined
-                      : {
-                          background: "var(--page-surface)",
-                          color: "var(--page-text)",
-                          border: "1px solid var(--page-border-subtle)",
-                        }
-                  }
-                >
+                  <a
+                    href={`https://api.whatsapp.com/send?phone=${waPhone}&text=${encodeURIComponent(
+                      `مرحباً، أود الاستفسار عن باقة: ${pkg.name}`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`block w-full py-3 rounded-full font-bold text-center transition-all ${
+                      pkg.popular
+                        ? "bg-gradient-to-r from-gold-600 to-gold-400 text-black hover:shadow-[0_0_20px_rgba(201,168,76,0.4)]"
+                        : "hover:bg-gold-500/10"
+                    }`}
+                    style={
+                      pkg.popular
+                        ? undefined
+                        : {
+                            background: "var(--page-surface)",
+                            color: "var(--page-text)",
+                            border: "1px solid var(--page-border-subtle)",
+                          }
+                    }
+                  >
                     طلب الباقة
-                  </button>
+                  </a>
                 </MagneticButton>
               </div>
             </motion.div>

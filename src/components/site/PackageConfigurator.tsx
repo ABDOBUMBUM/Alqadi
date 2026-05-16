@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Calendar, Users, Plane, Calculator } from "lucide-react";
 import { MagneticButton } from "@/components/ui/MagneticButton";
+import { useSiteContent } from "@/hooks/useSiteContent";
 
 const DESTINATIONS = [
   { id: "eu", name: "أوروبا (لندن، باريس، ميونخ)", basePrice: 200 },
@@ -22,6 +23,8 @@ import { useCurrency } from "@/context/CurrencyContext";
 
 export function PackageConfigurator() {
   const { currency, formatPrice } = useCurrency();
+  const { content } = useSiteContent();
+  const waPhone = String(content?.company?.whatsapp || "96598765432");
   const [dest, setDest] = useState(DESTINATIONS[0]);
   const [duration, setDuration] = useState(5);
   const [people, setPeople] = useState(2);
@@ -164,7 +167,7 @@ export function PackageConfigurator() {
             <MagneticButton>
               <a 
                 suppressHydrationWarning 
-                href={`https://api.whatsapp.com/send?phone=96598765432&text=${encodeURIComponent(`مرحباً، أود حجز الباقة التفاعلية التالية:\n\nالوجهة: ${dest.name}\nدرجة الطيران: ${flightClass.name}\nالمدة: ${duration} أيام\nعدد الأشخاص: ${people} أشخاص\n\n*التكلفة التقديرية الإجمالية:* ${formatPrice(totalCost)} ${currency.nameAr}\n\nأرجو المتابعة لإتمام الحجز.`)}`}
+                href={`https://api.whatsapp.com/send?phone=${waPhone}&text=${encodeURIComponent(`مرحباً، أود حجز الباقة التفاعلية التالية:\n\nالوجهة: ${dest.name}\nدرجة الطيران: ${flightClass.name}\nالمدة: ${duration} أيام\nعدد الأشخاص: ${people} أشخاص\n\n*التكلفة التقديرية الإجمالية:* ${formatPrice(totalCost)} ${currency.nameAr}\n\nأرجو المتابعة لإتمام الحجز.`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full flex justify-center items-center bg-gold-500 text-black font-bold rounded-xl py-3 hover:bg-gold-400 transition-colors"

@@ -10,14 +10,13 @@ import {
 
 const SESSION_KEY = "alqadi_portal_session";
 
-type Session = { name: string; username: string; role: string; branch: string; shift: string; };
+type Session = {
+  name: string; username: string; role: string;
+  branchId: string; branchName: string; shift: string; title: string; workLocation: string; loginTime: string;
+};
 type PricingRow = { destination: string; ticketPrice: string; securityApproval: string; visaFee: string; };
 
-const BRANCH_LABELS: Record<string, string> = {
-  hq: "الإدارة العامة", sanaa: "فرع صنعاء",
-  sanafer: "عدن - السنافر", mansoura: "عدن - المنصورة",
-  khormaksar: "عدن - خور مكسر",
-};
+
 
 async function loadPricing(): Promise<PricingRow[]> {
   try {
@@ -56,11 +55,33 @@ export default function WorkspacePage() {
   const [chatInput, setChatInput] = useState("");
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SESSION_KEY);
-      if (!raw) { router.replace("/portal/login"); return; }
-      setSession(JSON.parse(raw));
-    } catch { router.replace("/portal/login"); }
+    import("next-auth/react").then(({ getSession }) => {
+      getSession().then(sessionData => {
+        if (!sessionData?.user) {
+          router.replace("/portal/login");
+          return;
+        }
+        
+        const user = sessionData.user as any;
+        const localRaw = localStorage.getItem(SESSION_KEY);
+        let extraInfo: any = {};
+        if (localRaw) {
+          try { extraInfo = JSON.parse(localRaw); } catch { /* ignore */ }
+        }
+        
+        setSession({
+          name: user.name || "",
+          username: extraInfo.username || user.email || "",
+          role: user.role || "agent",
+          branchId: user.branchId || "",
+          branchName: user.branchName || "",
+          shift: user.shift || "",
+          title: user.title || "",
+          workLocation: extraInfo.workLocation || "office",
+          loginTime: extraInfo.loginTime || new Date().toISOString(),
+        } as Session);
+      });
+    });
     loadPricing().then(setPricing);
   }, [router]);
 
@@ -71,8 +92,10 @@ export default function WorkspacePage() {
   const grandTotal = unitTotal * Number(passengers || 1);
 
   function logout() {
-    try { localStorage.removeItem(SESSION_KEY); } catch { /**/ }
-    router.replace("/portal/login");
+    import("next-auth/react").then(({ signOut }) => {
+      try { localStorage.removeItem(SESSION_KEY); } catch { /**/ }
+      signOut({ callbackUrl: "/portal/login" });
+    });
   }
 
   function generateQuote() {
@@ -110,7 +133,7 @@ export default function WorkspacePage() {
           </div>
           <div>
             <p className="text-sm font-bold text-white">مساحة العمل</p>
-            <p className="text-[10px] text-white/40">{BRANCH_LABELS[session.branch]} — {session.name}</p>
+            <p className="text-[10px] text-white/40">{session.branchName} — {session.name}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

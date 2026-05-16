@@ -110,6 +110,23 @@ function HotelImageCarousel({ images, name }: { images: string[], name: string }
 export default function HotelsPage() {
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [waPhone, setWaPhone] = useState("96598765432");
+  const [heroTitle, setHeroTitle] = useState("حجوزات فنادق مجموعة القاضي");
+  const [heroDesc, setHeroDesc] = useState("نقدم أفضل الخيارات الفندقية من 4 و 5 نجوم حول العالم لضمان إقامة فاخرة ومريحة لعملائنا.");
+  const [cmsHotels, setCmsHotels] = useState<any>({});
+  const [activeFilter, setActiveFilter] = useState("الكل");
+  const [filterLabels, setFilterLabels] = useState(["الكل", "مميز"]);
+  const [whyUsItems, setWhyUsItems] = useState([
+    { title: "أفضل الأسعار المضمونة", desc: "نضمن أفضل سعر مع إمكانية الاسترداد الكامل" },
+    { title: "دعم 24/7 عبر واتساب", desc: "فريقنا جاهز لمساعدتك في أي وقت ومن أي مكان" },
+    { title: "فنادق مختارة بعناية", desc: "كل فندق يمر بمعايير صارمة للجودة والخدمة" },
+  ]);
+  const [stats, setStats] = useState([
+    { label: "فندق شريك", value: "500+" },
+    { label: "دولة مغطاة", value: "75+" },
+    { label: "عميل راضٍ", value: "860K+" },
+    { label: "سنة خبرة", value: "45+" },
+  ]);
 
   useEffect(() => {
     fetch("/api/hotels")
@@ -122,12 +139,42 @@ export default function HotelsPage() {
           images: Array.isArray(h.images) ? h.images : (h.images ? [h.images] : ["/assets/hotels/default.jpg"]),
         }));
         setHotels(parsedData);
+        // Build unique cities list for filtering
+        const cities = Array.from(new Set(parsedData.map((h: any) => h.city))).filter(Boolean) as string[];
+        setFilterLabels(["الكل", "مميز", ...cities]);
         setLoading(false);
       })
       .catch(err => {
         console.error("Failed to load hotels:", err);
         setLoading(false);
       });
+  }, []);
+
+  const filteredHotels = hotels.filter((h) => {
+    if (activeFilter === "الكل") return true;
+    if (activeFilter === "مميز") return h.featured;
+    return h.city === activeFilter;
+  });
+
+  useEffect(() => {
+    fetch("/api/content")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.company?.whatsapp) setWaPhone(String(data.company.whatsapp));
+        if (data.cms_hotels) setCmsHotels(data.cms_hotels);
+        if (data.cms_hotels?.heroTitle) setHeroTitle(data.cms_hotels.heroTitle);
+        if (data.cms_hotels?.heroDesc) setHeroDesc(data.cms_hotels.heroDesc);
+        if (Array.isArray(data.cms_hotels?.filters) && data.cms_hotels.filters.length > 0) {
+          setFilterLabels(data.cms_hotels.filters);
+        }
+        if (Array.isArray(data.cms_hotels?.whyUs) && data.cms_hotels.whyUs.length > 0) {
+          setWhyUsItems(data.cms_hotels.whyUs);
+        }
+        if (Array.isArray(data.cms_hotels?.stats) && data.cms_hotels.stats.length > 0) {
+          setStats(data.cms_hotels.stats);
+        }
+      })
+      .catch(() => {});
   }, []);
   return (
     <div className="relative min-h-screen pt-28 marble-bg" style={{ color: "var(--page-text)" }}>
@@ -143,24 +190,24 @@ export default function HotelsPage() {
         <motion.div {...reveal} className="relative z-10 mx-auto max-w-4xl px-6">
           <p className="text-xs tracking-[0.4em] text-gold-400">LUXURY HOTELS</p>
           <h1 className="mt-4 text-4xl font-black md:text-6xl" style={{ color: "var(--page-text)" }}>
-            حجوزات <span className="text-gold-gradient">فنادق مجموعة القاضي</span>
+            {heroTitle}
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed" style={{ color: "var(--page-text-muted)" }}>
-            نختار لكم في مجموعة القاضي الذهبية أرقى الفنادق في أفضل الوجهات العالمية بأسعار تنافسية وخدمة كونسيرج شخصية متكاملة.
+            {heroDesc}
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <a
-              href="https://api.whatsapp.com/send?phone=96598765432&text=مرحباً، أود الاستفسار عن حجز فندق"
+              href={`https://api.whatsapp.com/send?phone=${waPhone}&text=${encodeURIComponent("مرحباً، أود الاستفسار عن حجز فندق")}`}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-gold gap-2"
             >
               <MessageCircle className="h-4 w-4" />
-              احجز عبر واتساب
+              {cmsHotels?.ctaBtnWhatsapp || "احجز عبر واتساب"}
             </a>
-            <a href="tel:+96598765432" className="btn-ghost-gold gap-2">
+            <a href={`tel:+${waPhone}`} className="btn-ghost-gold gap-2">
               <Phone className="h-4 w-4" />
-              اتصل بنا
+              {cmsHotels?.ctaBtnCall || "اتصل بنا"}
             </a>
           </div>
         </motion.div>
@@ -169,12 +216,7 @@ export default function HotelsPage() {
       {/* Stats */}
       <section className="mx-auto max-w-7xl px-6 py-8 md:px-10">
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {[
-            { label: "فندق شريك", value: "500+" },
-            { label: "دولة مغطاة", value: "75+" },
-            { label: "عميل راضٍ", value: "860K+" },
-            { label: "سنة خبرة", value: "45+" },
-          ].map((stat, i) => (
+          {stats.map((stat, i) => (
             <motion.div
               key={stat.label}
               initial={{ opacity: 0, y: 16 }}
@@ -198,17 +240,18 @@ export default function HotelsPage() {
         <motion.div {...reveal} className="flex flex-wrap items-center gap-3">
           <Filter className="h-4 w-4 text-gold-400" />
           <span className="text-sm" style={{ color: "var(--page-text-muted)" }}>
-            تصفية حسب:
+            {cmsHotels?.filterText || "تصفية حسب:"}
           </span>
-          {["الكل", "فاخر", "أعمال", "تراثي", "إقتصادي"].map((cat) => (
+          {filterLabels.map((cat) => (
             <button
               key={cat}
+              onClick={() => setActiveFilter(cat)}
               className={`rounded-full border px-4 py-1.5 text-xs transition ${
-                cat === "الكل"
+                activeFilter === cat
                   ? "border-gold-500/60 bg-gold-500/15 text-gold-300"
                   : "hover:border-gold-500/30 hover:text-gold-300"
               }`}
-              style={cat === "الكل" ? undefined : { borderColor: "var(--page-border-subtle)", color: "var(--page-text-muted)" }}
+              style={activeFilter === cat ? undefined : { borderColor: "var(--page-border-subtle)", color: "var(--page-text-muted)" }}
             >
               {cat}
             </button>
@@ -222,65 +265,68 @@ export default function HotelsPage() {
           <div className="flex justify-center py-20 text-gold-400">جاري تحميل أحدث الفنادق...</div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {hotels.map((hotel, i) => (
-              <motion.article
-                key={hotel.id}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.08, duration: 0.6 }}
-                whileHover={{ y: -6 }}
-                className="gold-glow-card group overflow-hidden rounded-3xl border border-gold-500/15"
-                style={{ background: "var(--page-surface)" }}
-              >
-                <div className="relative h-52 overflow-hidden">
-                  <HotelImageCarousel images={hotel.images} name={hotel.name} />
-                  {hotel.featured && (
-                    <span className="absolute right-3 top-3 rounded-full bg-gold-500 px-3 py-1 text-[10px] font-bold text-black z-10">
-                      مميز
-                    </span>
-                  )}
-                  <div className="absolute bottom-3 left-3 z-10">
-                    <StarRating count={hotel.stars} />
-                  </div>
-                </div>
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-bold" style={{ color: "var(--page-text)" }}>
-                      {hotel.name}
-                    </h3>
-                    <p className="mt-1 flex items-center gap-1 text-xs" style={{ color: "var(--page-text-muted)" }}>
-                      <MapPin className="h-3 w-3 text-gold-400" />
-                      {hotel.city}، {hotel.country}
-                    </p>
-                  </div>
-                  <p className="text-sm font-bold text-gold-400 whitespace-nowrap">{hotel.priceFrom} {hotel.currency}</p>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {hotel.amenities.map((amenity) => (
-                    <span
-                      key={amenity}
-                      className="flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px]"
-                      style={{ borderColor: "var(--page-border-subtle)", color: "var(--page-text-muted)" }}
-                    >
-                      {amenityIcons[amenity] || <CheckCircle className="h-3 w-3" />}
-                      {amenity}
-                    </span>
-                  ))}
-                </div>
-                <a
-                  href="https://api.whatsapp.com/send?phone=96598765432"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-gold-500/30 bg-gold-500/10 py-2.5 text-sm text-gold-300 transition hover:bg-gold-500/20"
+            <AnimatePresence mode="popLayout">
+              {filteredHotels.map((hotel, i) => (
+                <motion.article
+                  layout
+                  key={hotel.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: i * 0.05, duration: 0.4 }}
+                  whileHover={{ y: -6 }}
+                  className="gold-glow-card group overflow-hidden rounded-3xl border border-gold-500/15"
+                  style={{ background: "var(--page-surface)" }}
                 >
-                  <MessageCircle className="h-4 w-4" />
-                  احجز هذا الفندق
-                </a>
-              </div>
-            </motion.article>
-          ))}
+                  <div className="relative h-52 overflow-hidden">
+                    <HotelImageCarousel images={hotel.images} name={hotel.name} />
+                    {hotel.featured && (
+                      <span className="absolute right-3 top-3 rounded-full bg-gold-500 px-3 py-1 text-[10px] font-bold text-black z-10">
+                        مميز
+                      </span>
+                    )}
+                    <div className="absolute bottom-3 left-3 z-10">
+                      <StarRating count={hotel.stars} />
+                    </div>
+                  </div>
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-bold" style={{ color: "var(--page-text)" }}>
+                        {hotel.name}
+                      </h3>
+                      <p className="mt-1 flex items-center gap-1 text-xs" style={{ color: "var(--page-text-muted)" }}>
+                        <MapPin className="h-3 w-3 text-gold-400" />
+                        {hotel.city}، {hotel.country}
+                      </p>
+                    </div>
+                    <p className="text-sm font-bold text-gold-400 whitespace-nowrap">{hotel.priceFrom} {hotel.currency}</p>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {hotel.amenities.map((amenity) => (
+                      <span
+                        key={amenity}
+                        className="flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px]"
+                        style={{ borderColor: "var(--page-border-subtle)", color: "var(--page-text-muted)" }}
+                      >
+                        {amenityIcons[amenity] || <CheckCircle className="h-3 w-3" />}
+                        {amenity}
+                      </span>
+                    ))}
+                  </div>
+                  <a
+                    href={`https://api.whatsapp.com/send?phone=${waPhone}&text=${encodeURIComponent(`مرحباً، أود حجز الفندق: ${hotel.name}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-gold-500/30 bg-gold-500/10 py-2.5 text-sm text-gold-300 transition hover:bg-gold-500/20"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    {cmsHotels?.bookBtnText || "احجز هذا الفندق"}
+                  </a>
+                </div>
+              </motion.article>
+            ))}
+          </AnimatePresence>
         </div>
         )}
       </section>
@@ -290,15 +336,11 @@ export default function HotelsPage() {
         <div className="mx-auto max-w-7xl px-6 md:px-10">
           <motion.div {...reveal} className="mb-12 text-center">
             <h2 className="text-3xl font-bold" style={{ color: "var(--page-text)" }}>
-              لماذا تحجز مع مجموعة القاضي؟
+              {cmsHotels?.whyUsTitle || "لماذا تحجز مع مجموعة القاضي؟"}
             </h2>
           </motion.div>
           <div className="grid gap-5 md:grid-cols-3">
-            {[
-              { icon: BadgeCheck, title: "أفضل الأسعار المضمونة", desc: "نضمن أفضل سعر مع إمكانية الاسترداد الكامل" },
-              { icon: MessageCircle, title: "دعم 24/7 عبر واتساب", desc: "فريقنا جاهز لمساعدتك في أي وقت ومن أي مكان" },
-              { icon: Star, title: "فنادق مختارة بعناية", desc: "كل فندق يمر بمعايير صارمة للجودة والخدمة" },
-            ].map((item, i) => (
+            {whyUsItems.map((item, i) => (
               <motion.div
                 key={item.title}
                 initial={{ opacity: 0, y: 20 }}
@@ -308,7 +350,7 @@ export default function HotelsPage() {
                 className="rounded-2xl border border-gold-500/15 p-6 text-center"
                 style={{ background: "var(--page-surface)" }}
               >
-                <item.icon className="mx-auto mb-3 h-8 w-8 text-gold-400" />
+                {i === 0 ? <BadgeCheck className="mx-auto mb-3 h-8 w-8 text-gold-400" /> : i === 1 ? <MessageCircle className="mx-auto mb-3 h-8 w-8 text-gold-400" /> : <Star className="mx-auto mb-3 h-8 w-8 text-gold-400" />}
                 <h3 className="font-bold" style={{ color: "var(--page-text)" }}>
                   {item.title}
                 </h3>
@@ -328,20 +370,20 @@ export default function HotelsPage() {
           className="rounded-3xl border border-gold-500/25 bg-gradient-to-r from-gold-500/10 to-transparent p-10"
         >
           <h2 className="text-2xl font-bold" style={{ color: "var(--page-text)" }}>
-            لم تجد الفندق المناسب؟
+            {cmsHotels?.ctaTitle || "لم تجد الفندق المناسب؟"}
           </h2>
           <p className="mt-3" style={{ color: "var(--page-text-muted)" }}>
-            تواصل مع فريق مجموعة القاضي وسنقوم بإيجاد الخيار المثالي لك وفق ميزانيتك ومتطلباتك الخاصة.
+            {cmsHotels?.ctaDesc || "تواصل مع فريق مجموعة القاضي وسنقوم بإيجاد الخيار المثالي لك وفق ميزانيتك ومتطلباتك الخاصة."}
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <a
-              href="https://api.whatsapp.com/send?phone=96598765432&text=مرحباً، أود الاستفسار عن حجز فندق"
+              href={`https://api.whatsapp.com/send?phone=${waPhone}&text=${encodeURIComponent("مرحباً، أود الاستفسار عن حجز فندق")}`}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-gold gap-2"
             >
               <MessageCircle className="h-4 w-4" />
-              تواصل مع مستشارنا
+              {cmsHotels?.ctaBtn || "تواصل مع مستشارنا"}
             </a>
             <Link href="/" className="btn-ghost-gold gap-2">
               <ChevronLeft className="h-4 w-4" />

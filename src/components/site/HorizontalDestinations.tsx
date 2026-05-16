@@ -20,6 +20,14 @@ type Destination = {
   img: string;
   highlights: string[];
 };
+type DestinationApi = { id?: string; name?: string; priceKWD?: number; img?: string; active?: boolean; duration?: string; highlights?: string[]; lat?: number | null; lng?: number | null };
+type HomeCms = {
+  destinationHighlightsDefault?: string[];
+  destinationDurationDefault?: string;
+  destinationsEyebrow?: string;
+  destinationsTitle?: string;
+  destinationsSubtitle?: string;
+};
 
 const defaultDestinations: Destination[] = [
   {
@@ -98,24 +106,39 @@ export function HorizontalDestinations() {
   const { formatPrice } = useCurrency();
   const [dests, setDests] = useState<Destination[]>(defaultDestinations);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [homeCms, setHomeCms] = useState<HomeCms | null>(null);
 
   useEffect(() => {
     fetch("/api/content")
       .then((res) => res.json())
       .then((data) => {
-        if (data.destinations && data.destinations.length > 0) {
-          const mapped = data.destinations.filter((d: any) => d.active).map((d: any, idx: number) => {
-            const fallback = defaultDestinations.find(fd => d.name.includes(fd.city)) || defaultDestinations[idx % defaultDestinations.length];
+        setHomeCms(data.cms_home || null);
+        if (Array.isArray(data.destinations) && data.destinations.length > 0) {
+          const mapped = (data.destinations as DestinationApi[]).filter((d) => d.active).map((d, idx: number) => {
+            const destinationName = d.name || "";
+            const fallback = defaultDestinations.find((fd) => destinationName.includes(fd.city)) || defaultDestinations[idx % defaultDestinations.length];
+            const highlightsFromDb = Array.isArray(d.highlights)
+              ? d.highlights
+              : Array.isArray(data.cms_home?.destinationHighlightsDefault)
+              ? data.cms_home.destinationHighlightsDefault
+              : fallback?.highlights || [];
+            const normalizedHighlights = highlightsFromDb.filter(
+              (item: unknown): item is string => typeof item === "string"
+            );
             return {
               id: d.id || String(idx),
-              city: d.name.split("،")[0] || d.name,
-              country: d.name.split("،")[1] || "",
-              price: "120",
-              duration: "5 أيام",
-              lat: fallback?.lat || 0,
-              lng: fallback?.lng || 0,
-              img: d.img,
-              highlights: ["جولات ثقافية", "إقامة فاخرة", "تنقل مريح"],
+              city: destinationName.split("،")[0] || destinationName,
+              country: destinationName.split("،")[1] || "",
+              price: String(d.priceKWD ?? fallback?.price ?? "0"),
+              duration:
+                (typeof d.duration === "string" && d.duration) ||
+                (typeof data.cms_home?.destinationDurationDefault === "string" && data.cms_home.destinationDurationDefault) ||
+                fallback?.duration ||
+                "",
+              lat: typeof d.lat === "number" ? d.lat : (fallback?.lat || 0),
+              lng: typeof d.lng === "number" ? d.lng : (fallback?.lng || 0),
+              img: d.img || fallback?.img || "/assets/destinations/egypt.png",
+              highlights: normalizedHighlights,
             };
           });
           if (mapped.length > 0) setDests(mapped);
@@ -156,7 +179,7 @@ export function HorizontalDestinations() {
 
   const targetRotation = useMemo(() => {
     return getRotationForLatLng(activeDestination?.lat || 0, activeDestination?.lng || 0, 1);
-  }, [activeDestination?.id]);
+  }, [activeDestination?.lat, activeDestination?.lng]);
 
   if (!activeDestination) return null;
 
@@ -181,13 +204,13 @@ export function HorizontalDestinations() {
         >
           <div>
             <span className="inline-flex items-center rounded-full border border-gold-400/30 bg-gold-500/10 px-4 py-1 text-sm text-gold-300">
-              تجربة تفاعلية على الخريطة
+              {homeCms?.destinationsEyebrow || "تجربة تفاعلية على الخريطة"}
             </span>
             <h2 className="mt-4 text-3xl font-bold md:text-5xl" style={{ color: "var(--page-text)" }}>
-              اختر رحلتك من الكرة الأرضية
+              {homeCms?.destinationsTitle || "اختر رحلتك من الكرة الأرضية"}
             </h2>
             <p className="mt-4 max-w-2xl text-base md:text-lg" style={{ color: "var(--page-text-muted)" }}>
-              كل نقطة على الخريطة تمثل وجهة حقيقية. اضغط على الدولة لتظهر لك التفاصيل والسعر والخدمات مباشرة.
+              {homeCms?.destinationsSubtitle || "كل نقطة على الخريطة تمثل وجهة حقيقية. اضغط على الدولة لتظهر لك التفاصيل والسعر والخدمات مباشرة."}
             </p>
           </div>
 
@@ -315,7 +338,7 @@ export function HorizontalDestinations() {
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
-          {dests.map((destination: any, index: number) => (
+          {dests.map((destination, index: number) => (
             <button
               key={destination.id}
               type="button"

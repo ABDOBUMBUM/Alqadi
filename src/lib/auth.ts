@@ -18,6 +18,7 @@ export const authOptions: NextAuthOptions = {
 
         const employee = await prisma.employee.findUnique({
           where: { username: credentials.username },
+          include: { branch: true }
         });
 
         if (!employee || !employee.active) {
@@ -34,8 +35,10 @@ export const authOptions: NextAuthOptions = {
           name: employee.name,
           email: employee.email || employee.username,
           role: employee.role,
-          branch: employee.branch,
+          branchId: employee.branchId,
+          branchName: employee.branch?.name || "الرئيسي",
           title: employee.title,
+          shift: employee.shift,
         };
       },
     }),
@@ -48,8 +51,10 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.role = (user as any).role;
-        token.branch = (user as any).branch;
+        token.branchId = (user as any).branchId;
+        token.branchName = (user as any).branchName;
         token.title = (user as any).title;
+        token.shift = (user as any).shift;
         token.employeeId = user.id;
       }
       return token;
@@ -57,8 +62,10 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).role = token.role;
-        (session.user as any).branch = token.branch;
+        (session.user as any).branchId = token.branchId;
+        (session.user as any).branchName = token.branchName;
         (session.user as any).title = token.title;
+        (session.user as any).shift = token.shift;
         (session.user as any).employeeId = token.employeeId;
       }
       return session;

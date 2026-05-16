@@ -7,6 +7,7 @@ import {
   ArrowRight, MessageCircle, Check, ChevronDown,
   MapPin, Sparkles,
 } from "lucide-react";
+import { useSiteContent } from "@/hooks/useSiteContent";
 
 /* ── types ─────────────────────────────────── */
 type TripKind = "one-way" | "round" | "package";
@@ -103,6 +104,7 @@ const STEPS = ["نوع الرحلة", "المسار", "المسافرون", "ا�
 
 /* ── helpers ─────────────────────────────── */
 function buildWA(data: {
+  phone: string;
   kind: TripKind; from: string; to: string;
   depart: string; ret: string;
   adults: number; children: number; infants: number;
@@ -123,7 +125,7 @@ function buildWA(data: {
   msg += `\n💺 درجة المقعد: ${seatLabel}\n`;
   if (data.notes) msg += `\n📝 ملاحظات: ${data.notes}\n`;
   msg += `\nأرجو التواصل لتأكيد الحجز وتفاصيل الأسعار.`;
-  return `https://api.whatsapp.com/send?phone=96598765432&text=${encodeURIComponent(msg)}`;
+  return `https://api.whatsapp.com/send?phone=${data.phone}&text=${encodeURIComponent(msg)}`;
 }
 
 /* ── sub-components ─────────────────────── */
@@ -324,6 +326,8 @@ function CustomDatePicker({ label, value, onChange, minDate }: { label: string; 
 interface Props { open: boolean; onClose: () => void; }
 
 export function TravelBookingModal({ open, onClose }: Props) {
+  const { content } = useSiteContent();
+  const waPhone = String(content?.company?.whatsapp || "96598765432");
   const [step, setStep] = useState<Step>(0);
   const [kind, setKind] = useState<TripKind>("round");
   const [from, setFrom] = useState("الكويت");
@@ -686,7 +690,7 @@ export function TravelBookingModal({ open, onClose }: Props) {
                     التالي <ArrowLeft className="h-4 w-4" />
                   </button>
                 ) : (
-                  <a href={buildWA({ kind, from, to, depart, ret, adults, children, infants, seat, notes })}
+                  <a href={buildWA({ phone: waPhone, kind, from, to, depart, ret, adults, children, infants, seat, notes })}
                     target="_blank" rel="noopener noreferrer"
                     className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gold-500 py-3 text-sm font-bold text-black transition hover:bg-gold-400">
                     <MessageCircle className="h-4 w-4" />

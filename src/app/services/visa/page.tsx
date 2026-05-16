@@ -18,7 +18,21 @@ import {
   Zap,
   Timer,
   Calendar,
+  HelpCircle,
 } from "lucide-react";
+
+const ICON_MAP: Record<string, any> = {
+  FileText,
+  Upload,
+  Search,
+  BadgeCheck,
+  Shield,
+  Clock,
+  Globe2,
+  CheckCircle2,
+  Zap,
+  Timer,
+};
 
 const reveal = {
   initial: { opacity: 0, y: 28 },
@@ -59,6 +73,12 @@ const features = [
 export default function VisaPage() {
   const [visaCountries, setVisaCountries] = useState<VisaCountry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [waPhone, setWaPhone] = useState("96598765432");
+  const [heroTitle, setHeroTitle] = useState("خدمات التأشيرات من القاضي");
+  const [heroDesc, setHeroDesc] = useState("نقدم في مجموعة القاضي الذهبية دعماً متكاملاً في متابعة عملية الحصول على التأشيرة لأكثر من 30 دولة حول العالم، بخبرة تمتد لأكثر من 45 عاماً.");
+  const [cmsFeatures, setCmsFeatures] = useState<any[]>(features);
+  const [cmsSteps, setCmsSteps] = useState<any[]>(steps);
+  const [cmsVisa, setCmsVisa] = useState<any>({});
 
   useEffect(() => {
     fetch("/api/visas")
@@ -71,6 +91,32 @@ export default function VisaPage() {
         console.error("Failed to load visas:", err);
         setLoading(false);
       });
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/content")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.company?.whatsapp) setWaPhone(String(data.company.whatsapp));
+        if (data.cms_visa) {
+          setCmsVisa(data.cms_visa);
+          if (data.cms_visa.heroTitle) setHeroTitle(data.cms_visa.heroTitle);
+          if (data.cms_visa.heroDesc) setHeroDesc(data.cms_visa.heroDesc);
+          if (Array.isArray(data.cms_visa.features) && data.cms_visa.features.length > 0) {
+            setCmsFeatures(data.cms_visa.features.map((f: any, idx: number) => ({
+              ...f,
+              icon: ICON_MAP[f.icon] || features[idx]?.icon || Shield
+            })));
+          }
+          if (Array.isArray(data.cms_visa.steps) && data.cms_visa.steps.length > 0) {
+            setCmsSteps(data.cms_visa.steps.map((s: any, idx: number) => ({
+              ...s,
+              icon: ICON_MAP[s.icon] || steps[idx]?.icon || FileText
+            })));
+          }
+        }
+      })
+      .catch(() => {});
   }, []);
 
   return (
@@ -87,15 +133,14 @@ export default function VisaPage() {
         <motion.div {...reveal} className="relative z-10 mx-auto max-w-4xl px-6">
           <p className="text-xs tracking-[0.4em] text-gold-400">VISA SERVICES</p>
           <h1 className="mt-4 text-4xl font-black md:text-6xl" style={{ color: "var(--page-text)" }}>
-            خدمات <span className="text-gold-gradient">التأشيرات من القاضي</span>
+            {heroTitle}
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed" style={{ color: "var(--page-text-muted)" }}>
-            نقدم في مجموعة القاضي الذهبية دعماً متكاملاً في متابعة عملية الحصول على التأشيرة لأكثر من 30 دولة حول العالم، بخبرة تمتد
-            لأكثر من 45 عاماً.
+            {heroDesc}
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <a
-              href="https://api.whatsapp.com/send?phone=96598765432&text=مرحباً، أود الاستفسار عن التأشيرات"
+              href={`https://api.whatsapp.com/send?phone=${waPhone}&text=${encodeURIComponent("مرحباً، أود الاستفسار عن التأشيرات")}`}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-gold gap-2"
@@ -103,7 +148,7 @@ export default function VisaPage() {
               <MessageCircle className="h-4 w-4" />
               استفسر عبر واتساب
             </a>
-            <a href="tel:+96598765432" className="btn-ghost-gold gap-2">
+            <a href={`tel:+${waPhone}`} className="btn-ghost-gold gap-2">
               <Phone className="h-4 w-4" />
               اتصل بنا الآن
             </a>
@@ -114,7 +159,7 @@ export default function VisaPage() {
       {/* Features */}
       <section className="mx-auto max-w-7xl px-6 py-12 md:px-10">
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-          {features.map((f, i) => (
+          {cmsFeatures.map((f, i) => (
             <motion.div
               key={f.text}
               initial={{ opacity: 0, scale: 0.9 }}
@@ -138,10 +183,10 @@ export default function VisaPage() {
         <motion.div {...reveal} className="mb-12 text-center">
           <p className="text-xs tracking-[0.35em] text-gold-400">DESTINATIONS</p>
           <h2 className="mt-4 text-3xl font-bold md:text-4xl" style={{ color: "var(--page-text)" }}>
-            التأشيرات المتاحة عبر مجموعة القاضي
+            {cmsVisa?.destinationsTitle || "التأشيرات المتاحة عبر مجموعة القاضي"}
           </h2>
           <p className="mt-3" style={{ color: "var(--page-text-muted)" }}>
-            اختر وجهتك واطلب تأشيرتك بسهولة عبر فريق القاضي
+            {cmsVisa?.destinationsDesc || "اختر وجهتك واطلب تأشيرتك بسهولة عبر فريق القاضي"}
           </p>
         </motion.div>
 
@@ -180,13 +225,13 @@ export default function VisaPage() {
                   ))}
                 </div>
                 <a
-                  href="https://api.whatsapp.com/send?phone=96598765432"
+                  href={`https://api.whatsapp.com/send?phone=${waPhone}&text=${encodeURIComponent(`مرحباً، أود طلب تأشيرة ${country.country}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-gold-500/30 bg-gold-500/10 py-2.5 text-sm text-gold-300 transition hover:bg-gold-500/20"
                 >
                   <MessageCircle className="h-4 w-4" />
-                  قدّم طلبك الآن
+                  {cmsVisa?.destinationsBtn || "قدّم طلبك الآن"}
                 </a>
               </motion.div>
             ))
@@ -200,11 +245,11 @@ export default function VisaPage() {
           <motion.div {...reveal} className="mb-14 text-center">
             <p className="text-xs tracking-[0.35em] text-gold-400">HOW IT WORKS</p>
             <h2 className="mt-4 text-3xl font-bold md:text-4xl" style={{ color: "var(--page-text)" }}>
-              كيف تحصل على تأشيرتك؟
+              {cmsVisa?.stepsTitle || "كيف تحصل على تأشيرتك؟"}
             </h2>
           </motion.div>
           <div className="grid gap-8 md:grid-cols-4">
-            {steps.map((step, i) => (
+            {cmsSteps.map((step, i) => (
               <motion.div
                 key={step.title}
                 initial={{ opacity: 0, y: 24 }}
@@ -241,21 +286,21 @@ export default function VisaPage() {
           className="rounded-3xl border border-gold-500/25 bg-gradient-to-r from-gold-500/10 to-transparent p-10"
         >
           <Calendar className="mx-auto mb-4 h-10 w-10 text-gold-400" />
-          <h2 className="text-2xl font-bold md:text-3xl" style={{ color: "var(--page-text)" }}>
-            فريق مجموعة القاضي جاهز لمساعدتك الآن
+          <h2 className="text-3xl font-bold md:text-4xl" style={{ color: "var(--page-text)" }}>
+            {cmsVisa?.ctaTitle || "فريق مجموعة القاضي جاهز لمساعدتك الآن"}
           </h2>
-          <p className="mt-3" style={{ color: "var(--page-text-muted)" }}>
-            تواصل معنا عبر واتساب للحصول على رد فوري وخدمة شخصية من مستشاري مجموعة القاضي.
+          <p className="mt-4 text-lg leading-relaxed" style={{ color: "var(--page-text-muted)" }}>
+            {cmsVisa?.ctaDesc || "تواصل معنا عبر واتساب للحصول على رد فوري وخدمة شخصية من مستشاري مجموعة القاضي."}
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <a
-              href="https://api.whatsapp.com/send?phone=96598765432&text=مرحباً، أود الاستفسار عن خدمات التأشيرات"
+              href={`https://api.whatsapp.com/send?phone=${waPhone}&text=${encodeURIComponent("مرحباً، أود الاستفسار عن خدمات التأشيرات")}`}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-gold gap-2"
             >
-              <MessageCircle className="h-4 w-4" />
-              تواصل عبر واتساب
+              <MessageCircle className="h-5 w-5" />
+              {cmsVisa?.ctaBtn || "تواصل عبر واتساب"}
             </a>
             <Link href="/" className="btn-ghost-gold gap-2">
               <ChevronLeft className="h-4 w-4" />

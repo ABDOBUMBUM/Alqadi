@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Database, Plus, Trash2, Edit3, Save } from "lucide-react";
 
-export function DynamicDbSection() {
+export function DynamicDbSection({ isDark }: { isDark?: boolean }) {
   const [schemas, setSchemas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 

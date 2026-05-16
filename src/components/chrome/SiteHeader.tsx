@@ -10,6 +10,7 @@ import { TravelBookingModal } from "@/components/forms/TravelBookingModal";
 import { useCurrency, CURRENCIES, type CurrencyCode } from "@/context/CurrencyContext";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useSiteExperience } from "@/context/SiteExperienceContext";
+import { useSiteContent } from "@/hooks/useSiteContent";
 
 export function SiteHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -19,10 +20,17 @@ export function SiteHeader() {
   const { colorMode } = useSiteExperience();
   const isLight = colorMode === "light";
   const pathname = usePathname();
+  const { content } = useSiteContent();
+
+  const phone = content?.company?.phone || "+965 9876 5432";
+  const email = content?.company?.email || "info@alqadigroup.com";
+  const address = content?.company?.address || "الكويت";
+  const brand = content?.company?.nameAr || "مجموعة القاضي الذهبية";
 
   const navItems = [
     { href: "/", label: "الرئيسية" },
     { href: "/about", label: "من نحن" },
+    { href: "/services/travel", label: "السياحة" },
     { href: "/services/visa", label: "التأشيرات" },
     { href: "/services/hotels", label: "الفنادق" },
     { href: "/services/manpower", label: "التوظيف" },
@@ -47,19 +55,19 @@ export function SiteHeader() {
             <div className="flex items-center gap-6">
               <span className="flex items-center gap-2">
                 <Globe className="h-3 w-3 text-gold-400" />
-                مرحباً بكم في مجموعة القاضي للسفريات والسياحة
+                مرحباً بكم في {brand}
               </span>
               <span className="flex items-center gap-2">
                 <MapPin className="h-3 w-3 text-gold-400" />
-                الكويت
+                {address}
               </span>
               <span className="flex items-center gap-2">
                 <Phone className="h-3 w-3 text-gold-400" />
-                +965 9876 5432
+                {phone}
               </span>
               <span className="flex items-center gap-2">
                 <Mail className="h-3 w-3 text-gold-400" />
-                info@alqadigroup.com
+                {email}
               </span>
             </div>
             <div className="flex items-center gap-4">

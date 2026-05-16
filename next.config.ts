@@ -5,8 +5,18 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
+const isProd = process.env.NODE_ENV === "production";
+
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["192.168.1.64"],
+  // Only allow dev origins in development
+  ...(isProd ? {} : { allowedDevOrigins: ["192.168.1.64"] }),
+
+  // Compress responses
+  compress: true,
+
+  // Hide X-Powered-By header
+  poweredByHeader: false,
+
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
@@ -14,8 +24,13 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "images.unsplash.com",
       },
+      {
+        protocol: "https",
+        hostname: "alqadigroup.com",
+      },
     ],
   },
+
   async headers() {
     const security = [
       { key: "X-Frame-Options", value: "DENY" },
@@ -26,7 +41,7 @@ const nextConfig: NextConfig = {
         value: "camera=(), microphone=(), geolocation=()",
       },
     ];
-    if (process.env.NODE_ENV === "production") {
+    if (isProd) {
       security.push({
         key: "Strict-Transport-Security",
         value: "max-age=63072000; includeSubDomains; preload",
@@ -42,3 +57,4 @@ const nextConfig: NextConfig = {
 };
 
 export default withBundleAnalyzer(nextConfig);
+

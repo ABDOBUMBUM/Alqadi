@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCmsData } from "@/lib/cms";
+import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "الأسئلة الشائعة | مجموعة القاضي الذهبية",
@@ -80,6 +81,8 @@ const faqs = [
 
 export default async function FaqPage() {
   const cms = await getCmsData("cms_faq");
+  const companySetting = await prisma.siteSetting.findUnique({ where: { key: "company" } });
+  const waPhone = String((companySetting?.value as any)?.whatsapp || "96598765432");
   const _faqs = cms?.faqs ?? faqs;
   const jsonLd = {
     "@context": "https://schema.org",
@@ -150,7 +153,7 @@ export default async function FaqPage() {
               تواصل مع فريقنا مباشرة وسنجيب على كل استفساراتك.
             </p>
             <a
-              href="https://api.whatsapp.com/send?phone=96598765432"
+              href={`https://api.whatsapp.com/send?phone=${waPhone}`}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-gold mx-auto mt-6 inline-flex"
