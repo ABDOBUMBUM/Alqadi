@@ -1,0 +1,8 @@
+{
+  "name": "AlQadi Engine PRO",
+  "description": "Premium cinematic internal portal for Al-Qadi Golden Group's Smart Search System.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

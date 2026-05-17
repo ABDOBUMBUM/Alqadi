@@ -695,3 +695,38 @@ html .animate-float, html .animate-pulse-glow, html .animate-rotate-slow,
 html .animate-aurora, html .animate-shimmer {
   transition: none !important;
 }
+
+/* ═══ PORTAL BOOKING UTILITIES ══════════════════════════════ */
+.hero-heading {
+  background: linear-gradient(135deg, #ffffff 0%, #b08d57 50%, #ffffff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  background-size: 200% auto;
+  animation: gold-shimmer 6s linear infinite;
+}
+
+.liquid-glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+@keyframes marquee-r {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes marquee-l {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0%); }
+}
+
+.animate-marquee-right {
+  animation: marquee-r 30s linear infinite;
+}
+
+.animate-marquee-left {
+  animation: marquee-l 30s linear infinite;
+}

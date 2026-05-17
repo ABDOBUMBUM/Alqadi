@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Plane, LogOut, User, MapPin, Phone, DollarSign,
   Calculator, MessageSquare, Send, Bot, ChevronDown,
-  Building2, Clock, LayoutDashboard,
+  Building2, Clock, LayoutDashboard, Globe
 } from "lucide-react";
 
 const SESSION_KEY = "alqadi_portal_session";
@@ -137,6 +137,10 @@ export default function WorkspacePage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => router.push("/portal/booking")}
+            className="flex items-center gap-1.5 rounded-xl border border-gold-500/20 bg-gold-500/5 px-3 py-1.5 text-xs text-gold-300 hover:bg-gold-500/10 transition">
+            <Globe className="h-3.5 w-3.5 text-gold-400" /> بوابة الحجز الذكي
+          </button>
           {session.role === "supervisor" && (
             <>
               <button onClick={() => router.push("/portal/dashboard")}

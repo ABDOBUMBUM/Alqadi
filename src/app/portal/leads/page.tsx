@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, TrendingUp, ShieldCheck, DollarSign,
   Plane, LogOut, Bell, Moon, Sun, Menu, X, BarChart3, MessageSquare,
   Clock, MapPin, Building2, CheckCircle, Phone, Mail, FileText,
-  AlertCircle
+  AlertCircle, Globe
 } from "lucide-react";
 
 const SESSION_KEY = "alqadi_portal_session";
@@ -130,6 +130,7 @@ export default function LeadsInboxPage() {
           {[
             { icon: LayoutDashboard, label: "لوحة القيادة", active: false, href: "/portal/dashboard" },
             { icon: Plane, label: "مساحة العمل", active: false, href: "/portal/workspace" },
+            { icon: Globe, label: "بوابة الحجز الذكي", active: false, href: "/portal/booking" },
             { icon: Users, label: "الموظفون", active: false, href: "#" },
             { icon: MessageSquare, label: "صندوق الطلبات", active: true, href: "/portal/leads" },
             { icon: BarChart3, label: "التقارير", active: false, href: "#" },
