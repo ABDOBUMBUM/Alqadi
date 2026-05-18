@@ -1,5 +1,18 @@
 import { NextResponse } from "next/server";
 
+// خريطة المطارات الشاملة مع أسماء الدول والموانئ الجوية باللغتين العربية والإنجليزية
+const airportsMap: Record<string, { ar: string; en: string; country: string }> = {
+  "ADE": { ar: "عدن (ADE) - مطار عدن الدولي", en: "Aden (ADE) - Aden International Airport", country: "اليمن" },
+  "GXF": { ar: "سيئون (GXF) - مطار سيئون الدولي", en: "Seiyun (GXF) - Seiyun Airport", country: "اليمن" },
+  "SAH": { ar: "صنعاء (SAH) - مطار صنعاء الدولي", en: "Sanaa (SAH) - Sanaa International Airport", country: "اليمن" },
+  "RIY": { ar: "الريان (RIY) - مطار الريان الدولي", en: "Riyan (RIY) - Riyan Airport", country: "اليمن" },
+  "CAI": { ar: "القاهرة (CAI) - مطار القاهرة الدولي", en: "Cairo (CAI) - Cairo International Airport", country: "مصر" },
+  "JED": { ar: "جدة (JED) - مطار الملك عبدالعزيز", en: "Jeddah (JED) - King Abdulaziz International Airport", country: "السعودية" },
+  "RUH": { ar: "الرياض (RUH) - مطار الملك خالد", en: "Riyadh (RUH) - King Khalid International Airport", country: "السعودية" },
+  "AMM": { ar: "عمان (AMM) - مطار الملكة علياء", en: "Amman (AMM) - Queen Alia International Airport", country: "الأردن" },
+  "BOM": { ar: "مومباي (BOM) - مطار مومباي الدولي", en: "Mumbai (BOM) - Chhatrapati Shivaji Maharaj International Airport", country: "الهند" }
+};
+
 // خوارزمية لتحديد مواعيد الرحلات الواقعية (محاكاة دقيقة لجدول الرحلات)
 function getNextAvailableFlight(currentDate: Date, targetDays: number[]): Date {
   const nextDate = new Date(currentDate);
@@ -47,8 +60,10 @@ export async function POST(req: Request) {
     const createFlyAdenFlightsUnified = (flightDate: Date, isAlternative = false) => {
       const formatted = flightDate.toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}).replace(/ /g, '-');
       const formattedArabicDate = flightDate.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-      const originName = origin === 'ADE' ? 'عدن (ADE)' : origin;
-      const destName = destination === 'CAI' ? 'القاهرة (CAI)' : destination;
+      const originInfo = airportsMap[origin] || { ar: origin, en: origin };
+      const destInfo = airportsMap[destination] || { ar: destination, en: destination };
+      const originName = originInfo.ar;
+      const destName = destInfo.ar;
       
       return {
         id: `flyaden-unified-${formatted}-${isAlternative ? 'alt' : 'primary'}`,
@@ -86,8 +101,10 @@ export async function POST(req: Request) {
     const createYemeniaFlightsUnified = (flightDate: Date, isAlternative = false) => {
       const formatted = flightDate.toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}).replace(/ /g, '-');
       const formattedArabicDate = flightDate.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-      const originName = origin === 'ADE' ? 'عدن (ADE)' : origin;
-      const destName = destination === 'CAI' ? 'القاهرة (CAI)' : destination;
+      const originInfo = airportsMap[origin] || { ar: origin, en: origin };
+      const destInfo = airportsMap[destination] || { ar: destination, en: destination };
+      const originName = originInfo.ar;
+      const destName = destInfo.ar;
 
       return {
         id: `yemenia-unified-${formatted}-${isAlternative ? 'alt' : 'primary'}`,
@@ -127,10 +144,20 @@ export async function POST(req: Request) {
     // 2. إذا كانت شركة الطيران المفضلة (طيران عدن) لا تطير في هذا اليوم، اعرض اليمنية واقترح أقرب رحلة لطيران عدن كخيار بديل
     if (!flyAdenDays.includes(dayOfWeek)) {
       const nextFlyAden = getNextAvailableFlight(searchDate, flyAdenDays);
+      results.push(createFlyAdenFlightsUnified(nextFlyAden, true));
+      
       const formattedNext = nextFlyAden.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' });
       message = `رحلات طيران عدن المباشرة متوفرة يوم ${formattedNext}. تم إدراجها كخيارات بديلة أدناه.`;
-      
-      results.push(createFlyAdenFlightsUnified(nextFlyAden, true));
+    }
+
+    if (!yemeniaDays.includes(dayOfWeek)) {
+      const nextYemenia = getNextAvailableFlight(searchDate, yemeniaDays);
+      results.push(createYemeniaFlightsUnified(nextYemenia, true));
+
+      if (!message) {
+        const formattedNextYemenia = nextYemenia.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' });
+        message = `رحلات الخطوط اليمنية المباشرة متوفرة يوم ${formattedNextYemenia}. تم إدراجها كخيارات بديلة أدناه.`;
+      }
     }
 
     // 3. إضافة الباقات الفندقية إذا كان الاستعلام يحتوي على كلمة "فندق" أو "باقة"

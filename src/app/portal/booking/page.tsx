@@ -8,7 +8,7 @@ import {
   PhoneCall, Globe, ArrowLeft, CheckCircle2, 
   Clock, Database, Navigation, Menu, X,
   Sparkles, Loader2, Star, MapPin, BarChart3,
-  Calendar
+  Calendar, Check
 } from "lucide-react";
 
 // ========================================================
@@ -184,102 +184,148 @@ const ResultCard = ({ res, currencyMode }: { res: SearchResult; currencyMode: 'U
   }];
 
   const activeOpt = options[selectedOption] || options[0];
-  const displayPrice = currencyMode === 'SAR' ? Math.round(activeOpt.price * 3.75) : activeOpt.price;
   const displayCurrency = currencyMode === 'SAR' ? 'ر.س' : '$';
 
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="liquid-glass rounded-2xl p-6 border border-white/5 flex flex-col gap-4 relative overflow-hidden group font-cairo"
+      className="liquid-glass rounded-[2rem] p-8 border border-white/10 flex flex-col gap-6 relative overflow-hidden group font-cairo shadow-2xl"
     >
       <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-        {res.type === 'flight' ? <Plane className="w-20 h-20" /> : <MapPin className="w-20 h-20" />}
+        {res.type === 'flight' ? <Plane className="w-24 h-24 text-[#b08d57]" /> : <MapPin className="w-24 h-24 text-[#b08d57]" />}
       </div>
       
-      <div className="flex justify-between items-start relative z-10 gap-2">
+      {/* Flight Header */}
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center relative z-10 gap-4 border-b border-white/5 pb-4">
         <div className="flex-1 text-right">
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            <span className="text-xs font-bold px-2 py-1 bg-[#b08d57]/20 text-[#b08d57] rounded uppercase tracking-wider">
-              {res.type === 'flight' ? 'رحلة طيران' : 'باقة سياحية'}
+            <span className="text-[10px] font-black px-3 py-1 bg-[#b08d57]/20 text-[#b08d57] rounded-full uppercase tracking-wider">
+              {res.type === 'flight' ? 'رحلة طيران مباشرة' : 'باقة إقامة سياحية'}
             </span>
             <div className="flex items-center gap-1 text-[#b08d57]">
-              <Star className="w-3 h-3 fill-[#b08d57]" />
-              <span className="text-xs font-bold">{res.rating}</span>
+              <Star className="w-3.5 h-3.5 fill-[#b08d57]" />
+              <span className="text-xs font-black">{res.rating}</span>
             </div>
             
             {res.dateText && (
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-300 text-[10px] tracking-wide font-cairo font-bold">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-slate-300 text-[10px] tracking-wide font-cairo font-bold">
                 <Calendar className="w-3.5 h-3.5 text-[#b08d57]" />
-                <span>التاريخ: {res.dateText}</span>
+                <span>تاريخ البحث: {res.dateText}</span>
               </div>
             )}
           </div>
           
-          <h4 className="text-xl font-bold text-white mb-1 font-cairo">
+          <h4 className="text-2xl font-black text-white mb-1 font-cairo tracking-tight">
             {res.title.includes('(رحلة بديلة)') ? (
               <span className="flex items-center gap-2">
                 {res.title.replace('(رحلة بديلة)', '')}
-                <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full border border-red-500/30 font-bold">رحلة بديلة</span>
+                <span className="text-[10px] bg-red-500/20 text-red-400 px-3 py-1 rounded-full border border-red-500/30 font-black animate-pulse">رحلة بديلة مقترحة</span>
               </span>
             ) : (
               res.title
             )}
           </h4>
-          <p className="text-slate-400 text-sm font-cairo">{res.airline}</p>
-        </div>
-        <div className="text-left shrink-0">
-          <span className="text-2xl font-black text-white">{displayPrice}</span>
-          <span className="text-xs text-[#b08d57] font-bold mr-1 tracking-tighter">{displayCurrency}</span>
+          <p className="text-slate-400 text-sm font-cairo font-bold">{res.airline}</p>
         </div>
       </div>
 
-      {res.options && res.options.length > 0 && (
-        <div className="relative z-10 flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold text-[#b08d57] uppercase tracking-wider font-cairo">خيارات ودرجات الرحلة:</label>
-          <div className="grid grid-cols-3 gap-1 p-0.5 bg-[#0f172a]/70 rounded-xl border border-white/5">
-            {res.options.map((opt, idx) => (
+      {/* Flight Class Cards (خيارات داخل الـ Cards مضمن فيها التاريخ والسعر) */}
+      <div className="relative z-10 flex flex-col gap-3">
+        <label className="text-xs font-black text-[#b08d57] uppercase tracking-wider font-cairo">درجات الحجز المتاحة (اختر فئة التذكرة):</label>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {options.map((opt, idx) => {
+            const optPrice = currencyMode === 'SAR' ? Math.round(opt.price * 3.75) : opt.price;
+            const isSelected = selectedOption === idx;
+            
+            // تخصيص الألوان والشارات حسب الدرجة
+            let badgeStyle = "bg-slate-500/10 text-slate-400 border border-slate-500/20";
+            let activeBorder = "border-[#b08d57] bg-[#b08d57]/5";
+            let inactiveBorder = "border-white/5 hover:border-white/15 bg-white/5";
+            
+            if (opt.name.includes("Business") || opt.name.includes("الأعمال")) {
+              badgeStyle = "bg-[#b08d57]/20 text-[#b08d57] border border-[#b08d57]/30";
+            } else if (opt.name.includes("Flex") || opt.name.includes("مرنة")) {
+              badgeStyle = "bg-blue-500/20 text-blue-400 border border-blue-500/30";
+            }
+            
+            return (
               <button
                 key={idx}
                 onClick={() => setSelectedOption(idx)}
-                className={`py-2 rounded-lg text-center font-bold text-[10px] md:text-[11px] font-cairo transition-all ${
-                  selectedOption === idx 
-                    ? 'bg-[#b08d57] text-[#0f172a] shadow shadow-[#b08d57]/15' 
-                    : 'text-slate-400 hover:text-white'
+                className={`text-right p-4 rounded-2xl border transition-all duration-300 flex flex-col justify-between gap-3 relative ${
+                  isSelected ? activeBorder : inactiveBorder
                 }`}
               >
-                {opt.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+                {/* Check & Badge */}
+                <div className="flex justify-between items-center w-full">
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded ${badgeStyle}`}>
+                    {opt.name}
+                  </span>
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center border transition-all ${
+                    isSelected ? 'border-[#b08d57] bg-[#b08d57]' : 'border-white/20'
+                  }`}>
+                    {isSelected && <Check className="w-3.5 h-3.5 text-[#0f172a] stroke-[3]" />}
+                  </div>
+                </div>
 
-      <p className="text-slate-300 text-sm leading-relaxed relative z-10 font-cairo">{activeOpt.description}</p>
-      
-      <div className="flex items-center gap-4 text-xs text-slate-500 font-medium relative z-10 border-t border-white/5 pt-4">
-        <div className="flex items-center gap-1">
-          <Clock className="w-3 h-3" />
-          <span>{res.duration}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Database className="w-3 h-3" />
-          <span>تأكيد فوري للطلب</span>
+                {/* Option Embedded Flight Date (مضمن فيها التاريخ) */}
+                <div className="flex items-center gap-1.5 text-slate-300 text-[11px] font-bold mt-1">
+                  <Calendar className="w-3.5 h-3.5 text-[#b08d57] shrink-0" />
+                  <span className="truncate">تاريخ الرحلة: {res.dateText}</span>
+                </div>
+
+                {/* Pricing & Booking Action */}
+                <div className="flex justify-between items-baseline w-full border-t border-white/5 pt-2 mt-1">
+                  <span className="text-[10px] font-bold text-slate-400">السعر الكلي:</span>
+                  <div>
+                    <span className="text-xl font-black text-white">{optPrice}</span>
+                    <span className="text-xs text-[#b08d57] font-black mr-1">{displayCurrency}</span>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <button 
-        onClick={() => {
-          if (activeOpt.bookingUrl) {
-            window.open(activeOpt.bookingUrl, '_blank');
-          } else {
-            alert('جاري نقلك إلى منصة الحجز...');
-          }
-        }}
-        className="mt-2 w-full py-3 bg-[#b08d57]/10 hover:bg-[#b08d57] text-[#b08d57] hover:text-[#0f172a] rounded-xl font-bold transition-all border border-[#b08d57]/20 hover:border-transparent font-cairo"
-      >
-        تفاصيل الحجز (مباشر)
-      </button>
+      {/* Selected Option Description details */}
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-5 relative z-10">
+        <h5 className="text-xs font-black text-[#b08d57] mb-2 flex items-center gap-1.5">
+          <Database className="w-3.5 h-3.5" />
+          تفاصيل ومميزات الدرجة المختارة:
+        </h5>
+        <p className="text-slate-300 text-sm leading-relaxed font-cairo font-bold">{activeOpt.description}</p>
+      </div>
+      
+      {/* Bottom Info and Direct Link button */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs text-slate-500 font-medium relative z-10 border-t border-white/5 pt-4 mt-2">
+        <div className="flex items-center gap-4 text-slate-400">
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-[#b08d57]" />
+            <span className="font-bold">{res.duration}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Database className="w-3.5 h-3.5 text-[#b08d57]" />
+            <span className="font-bold">مزامنة حية من Videcom</span>
+          </div>
+        </div>
+
+        <button 
+          onClick={() => {
+            if (activeOpt.bookingUrl) {
+              window.open(activeOpt.bookingUrl, '_blank');
+            } else {
+              alert('جاري نقلك إلى منصة الحجز...');
+            }
+          }}
+          className="py-3 px-6 bg-[#b08d57] hover:bg-[#967543] text-[#0f172a] rounded-xl font-black transition-all font-cairo shadow-lg shadow-[#b08d57]/10 flex items-center justify-center gap-2 border border-transparent"
+        >
+          <span>تأكيد الحجز الفوري وإصدار التذكرة</span>
+          <Plane className="w-4 h-4 text-[#0f172a]" />
+        </button>
+      </div>
     </motion.div>
   );
 };
@@ -328,6 +374,28 @@ const getFallbackData = () => ({
   ]
 });
 
+const countriesData: Record<string, { code: string; name: string }[]> = {
+  "اليمن": [
+    { code: "ADE", name: "عدن (ADE) - مطار عدن الدولي" },
+    { code: "GXF", name: "سيئون (GXF) - مطار سيئون الدولي" },
+    { code: "SAH", name: "صنعاء (SAH) - مطار صنعاء الدولي" },
+    { code: "RIY", name: "الريان (RIY) - مطار الريان الدولي" }
+  ],
+  "السعودية": [
+    { code: "JED", name: "جدة (JED) - مطار الملك عبدالعزيز" },
+    { code: "RUH", name: "الرياض (RUH) - مطار الملك خالد" }
+  ],
+  "مصر": [
+    { code: "CAI", name: "القاهرة (CAI) - مطار القاهرة الدولي" }
+  ],
+  "الأردن": [
+    { code: "AMM", name: "عمان (AMM) - مطار الملكة علياء" }
+  ],
+  "الهند": [
+    { code: "BOM", name: "مومباي (BOM) - مطار مومباي الدولي" }
+  ]
+};
+
 // ========================================================
 // ⚡ MAIN PAGE
 // ========================================================
@@ -344,11 +412,29 @@ export default function BookingPortalPage() {
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [searchMessage, setSearchMessage] = useState("");
+  const [originCountry, setOriginCountry] = useState("اليمن");
   const [origin, setOrigin] = useState("ADE");
+  const [destCountry, setDestCountry] = useState("مصر");
   const [destination, setDestination] = useState("CAI");
   const [date, setDate] = useState("");
   const [passengers, setPassengers] = useState("1 Adult");
   const [currencyMode, setCurrencyMode] = useState<'USD' | 'SAR'>('SAR'); // وضع العملة الافتراضية للريال السعودي
+
+  const handleOriginCountryChange = (c: string) => {
+    setOriginCountry(c);
+    const airports = countriesData[c] || [];
+    if (airports.length > 0) {
+      setOrigin(airports[0].code);
+    }
+  };
+
+  const handleDestCountryChange = (c: string) => {
+    setDestCountry(c);
+    const airports = countriesData[c] || [];
+    if (airports.length > 0) {
+      setDestination(airports[0].code);
+    }
+  };
 
 
   const handleSearch = async (e?: React.FormEvent) => {
@@ -773,43 +859,69 @@ export default function BookingPortalPage() {
 
               {/* Search Modal Form */}
               <div className="bg-white/5 border border-white/10 rounded-[2rem] p-6 mb-12">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                  {/* Origin & Destination */}
-                  <div className="lg:col-span-2 grid grid-cols-2 gap-2 font-cairo">
-                    <div className="relative">
-                      <label className="absolute top-2 right-5 text-[9px] font-black text-[#b08d57] uppercase tracking-tighter z-10">من (Origin)</label>
-                      <select 
-                        value={origin}
-                        onChange={(e) => setOrigin(e.target.value)}
-                        className="w-full bg-[#0f172a]/80 border border-white/5 rounded-2xl px-5 py-6 pt-8 text-white focus:border-[#b08d57]/30 outline-none appearance-none cursor-pointer relative z-0"
-                      >
-                        <option value="ADE" className="bg-[#0f172a] text-white">عدن (ADE) - مطار عدن الدولي</option>
-                        <option value="GXF" className="bg-[#0f172a] text-white">سيئون (GXF) - مطار سيئون الدولي</option>
-                        <option value="SAH" className="bg-[#0f172a] text-white">صنعاء (SAH) - مطار صنعاء الدولي</option>
-                        <option value="RIY" className="bg-[#0f172a] text-white">الريان (RIY) - مطار الريان الدولي</option>
-                      </select>
-                      <div className="absolute left-4 bottom-4 pointer-events-none text-slate-500 text-xs">▼</div>
-                    </div>
-                    <div className="relative">
-                      <label className="absolute top-2 right-5 text-[9px] font-black text-[#b08d57] uppercase tracking-tighter z-10">إلى (Destination)</label>
-                      <select 
-                        value={destination}
-                        onChange={(e) => setDestination(e.target.value)}
-                        className="w-full bg-[#0f172a]/80 border border-white/5 rounded-2xl px-5 py-6 pt-8 text-white focus:border-[#b08d57]/30 outline-none appearance-none cursor-pointer relative z-0"
-                      >
-                        <option value="CAI" className="bg-[#0f172a] text-white">القاهرة (CAI) - مطار القاهرة الدولي</option>
-                        <option value="JED" className="bg-[#0f172a] text-white">جدة (JED) - مطار الملك عبدالعزيز</option>
-                        <option value="RUH" className="bg-[#0f172a] text-white">الرياض (RUH) - مطار الملك خالد</option>
-                        <option value="AMM" className="bg-[#0f172a] text-white">عمان (AMM) - مطار الملكة علياء</option>
-                        <option value="BOM" className="bg-[#0f172a] text-white">مومباي (BOM) - مطار مومباي الدولي</option>
-                      </select>
-                      <div className="absolute left-4 bottom-4 pointer-events-none text-slate-500 text-xs">▼</div>
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                  {/* Origin Country */}
+                  <div className="relative font-cairo">
+                    <label className="absolute top-2 right-5 text-[9px] font-black text-[#b08d57] uppercase tracking-tighter z-10">بلد المغادرة (Country of Origin)</label>
+                    <select 
+                      value={originCountry}
+                      onChange={(e) => handleOriginCountryChange(e.target.value)}
+                      className="w-full bg-[#0f172a]/80 border border-white/5 rounded-2xl px-5 py-6 pt-8 text-white focus:border-[#b08d57]/30 outline-none appearance-none cursor-pointer relative z-0"
+                    >
+                      {Object.keys(countriesData).map((c) => (
+                        <option key={c} value={c} className="bg-[#0f172a] text-white">{c}</option>
+                      ))}
+                    </select>
+                    <div className="absolute left-4 bottom-4 pointer-events-none text-slate-500 text-xs">▼</div>
                   </div>
 
+                  {/* Origin City/Airport */}
+                  <div className="relative font-cairo">
+                    <label className="absolute top-2 right-5 text-[9px] font-black text-[#b08d57] uppercase tracking-tighter z-10">مطار المغادرة (Origin Airport)</label>
+                    <select 
+                      value={origin}
+                      onChange={(e) => setOrigin(e.target.value)}
+                      className="w-full bg-[#0f172a]/80 border border-white/5 rounded-2xl px-5 py-6 pt-8 text-white focus:border-[#b08d57]/30 outline-none appearance-none cursor-pointer relative z-0"
+                    >
+                      {(countriesData[originCountry] || []).map((a) => (
+                        <option key={a.code} value={a.code} className="bg-[#0f172a] text-white">{a.name}</option>
+                      ))}
+                    </select>
+                    <div className="absolute left-4 bottom-4 pointer-events-none text-slate-500 text-xs">▼</div>
+                  </div>
+
+                  {/* Destination Country */}
+                  <div className="relative font-cairo">
+                    <label className="absolute top-2 right-5 text-[9px] font-black text-[#b08d57] uppercase tracking-tighter z-10">بلد الوصول (Country of Destination)</label>
+                    <select 
+                      value={destCountry}
+                      onChange={(e) => handleDestCountryChange(e.target.value)}
+                      className="w-full bg-[#0f172a]/80 border border-white/5 rounded-2xl px-5 py-6 pt-8 text-white focus:border-[#b08d57]/30 outline-none appearance-none cursor-pointer relative z-0"
+                    >
+                      {Object.keys(countriesData).map((c) => (
+                        <option key={c} value={c} className="bg-[#0f172a] text-white">{c}</option>
+                      ))}
+                    </select>
+                    <div className="absolute left-4 bottom-4 pointer-events-none text-slate-500 text-xs">▼</div>
+                  </div>
+
+                  {/* Destination City/Airport */}
+                  <div className="relative font-cairo">
+                    <label className="absolute top-2 right-5 text-[9px] font-black text-[#b08d57] uppercase tracking-tighter z-10">مطار الوصول (Destination Airport)</label>
+                    <select 
+                      value={destination}
+                      onChange={(e) => setDestination(e.target.value)}
+                      className="w-full bg-[#0f172a]/80 border border-white/5 rounded-2xl px-5 py-6 pt-8 text-white focus:border-[#b08d57]/30 outline-none appearance-none cursor-pointer relative z-0"
+                    >
+                      {(countriesData[destCountry] || []).map((a) => (
+                        <option key={a.code} value={a.code} className="bg-[#0f172a] text-white">{a.name}</option>
+                      ))}
+                    </select>
+                    <div className="absolute left-4 bottom-4 pointer-events-none text-slate-500 text-xs">▼</div>
+                  </div>
 
                   {/* Dates */}
-                  <div className="relative">
+                  <div className="relative font-cairo">
                     <label className="absolute top-3 right-5 text-[10px] font-bold text-[#b08d57] uppercase tracking-tighter">تاريخ المغادرة</label>
                     <input 
                       type="date" 
@@ -820,17 +932,18 @@ export default function BookingPortalPage() {
                   </div>
 
                   {/* Passengers */}
-                  <div className="relative">
+                  <div className="relative font-cairo">
                     <label className="absolute top-3 right-5 text-[10px] font-bold text-[#b08d57] uppercase tracking-tighter">المسافرون</label>
                     <select 
                       value={passengers}
                       onChange={(e) => setPassengers(e.target.value)}
-                      className="w-full bg-[#0f172a]/50 border border-white/5 rounded-2xl px-5 py-6 pt-8 text-white focus:border-[#b08d57]/30 outline-none appearance-none"
+                      className="w-full bg-[#0f172a]/50 border border-white/5 rounded-2xl px-5 py-6 pt-8 text-white focus:border-[#b08d57]/30 outline-none appearance-none cursor-pointer"
                     >
-                      <option value="1 Adult">1 بالغ</option>
-                      <option value="2 Adults">2 بالغين</option>
-                      <option value="Family">عائلة (2+2)</option>
+                      <option value="1 Adult" className="bg-[#0f172a]">1 بالغ</option>
+                      <option value="2 Adults" className="bg-[#0f172a]">2 بالغين</option>
+                      <option value="Family" className="bg-[#0f172a]">عائلة (2+2)</option>
                     </select>
+                    <div className="absolute left-4 bottom-4 pointer-events-none text-slate-500 text-xs">▼</div>
                   </div>
                 </div>
 
