@@ -18,7 +18,7 @@ import { CompanySection } from "./sections/CompanySection";
 import { CRMSection } from "./sections/CRMSection";
 import { BookingsSection, SupportTicketsSection } from "./sections/BookingsSupportSections";
 import { DestinationsSection, PackagesSection, HotelsSection, VisasSection, JobsSection } from "./sections/ProductSections";
-import { PricingSection, EmployeesSection, BranchesSection, CMSSection, AuditLogSection, SettingsSection } from "./sections/SystemSections";
+import { PricingSection, EmployeesSection, BranchesSection, CMSSection, AuditLogSection, SettingsSection, BookingPortalCMSSection } from "./sections/SystemSections";
 import { DashboardOverview } from "./sections/DashboardOverview";
 
 // --- Design Tokens & Constants ---
@@ -27,7 +27,7 @@ import { DashboardOverview } from "./sections/DashboardOverview";
 type Section = 
   | "dashboard" | "company" | "crm" | "bookings" | "support_tickets" 
   | "destinations" | "packages" | "hotels" | "visas" | "jobs" 
-  | "pricing" | "employees" | "branches" | "cms" 
+  | "pricing" | "employees" | "branches" | "cms" | "booking_portal_cms"
   | "dynamic_db" | "audit_log" | "api_integrations" | "settings";
 
 const SECTIONS = [
@@ -36,6 +36,9 @@ const SECTIONS = [
   { id: "jobs", label: "الموارد البشرية", icon: Users, group: "الكيانات الأساسية" },
   { id: "company", label: "الاستثمارات", icon: DollarSign, group: "الكيانات الأساسية" },
   { id: "crm", label: "إدارة العملاء CRM", icon: Briefcase, group: "الكيانات الأساسية" },
+  // ═══ PORTAL SECTION ═════════════════════════════
+  { id: "booking_portal_cms", label: "🚀 بوابة الحجز الذكي", icon: Globe2, group: "البوابة الداخلية", badge: "جديد" },
+  // ═══ ANALYTICS ═════════════════════════════════
   { id: "pricing", label: "التحليلات المالية", icon: Database, group: "التحليلات والتقارير" },
   { id: "cms", label: "إدارة المحتوى CMS", icon: Layers, group: "التحليلات والتقارير" },
   { id: "employees", label: "الموظفين والصلاحيات", icon: UserPlus, group: "الإدارة والرقابة" },
@@ -98,7 +101,7 @@ export default function AdminPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar py-6 px-4 space-y-6">
-          {["الرئيسية", "الكيانات الأساسية", "التحليلات والتقارير", "الإدارة والرقابة"].map((groupName) => {
+          {["الرئيسية", "الكيانات الأساسية", "البوابة الداخلية", "التحليلات والتقارير", "الإدارة والرقابة"].map((groupName) => {
             const groupSections = SECTIONS.filter(s => s.group === groupName);
             if(groupSections.length === 0) return null;
 
@@ -235,6 +238,7 @@ export default function AdminPage() {
               {activeSection === "employees" && <EmployeesSection isDark={isDark} />}
               {activeSection === "branches" && <BranchesSection isDark={isDark} />}
               {activeSection === "cms" && <CMSSection isDark={isDark} />}
+              {activeSection === "booking_portal_cms" && <BookingPortalCMSSection isDark={isDark} />}
               {activeSection === "audit_log" && <AuditLogSection isDark={isDark} />}
               {activeSection === "settings" && <SettingsSection isDark={isDark} />}
               {activeSection === "api_integrations" && <ApiIntegrationsSection isDark={isDark} />}

@@ -713,6 +713,42 @@ html .animate-aurora, html .animate-shimmer {
   border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
+/* cinematic-hover — bento card lift effect (CRITICAL: was missing) */
+.cinematic-hover {
+  transition: all 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cinematic-hover:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 50px -12px rgba(176, 141, 87, 0.35);
+  border-color: rgba(176, 141, 87, 0.4) !important;
+}
+
+/* noise-overlay — grain texture (CRITICAL: was missing in Next.js context) */
+.noise-overlay {
+  position: relative;
+}
+.noise-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("/assets/nnnoise.svg");
+  mix-blend-mode: soft-light;
+  opacity: 0.12;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* @keyframes slide — progress bar shimmer (CRITICAL: was missing) */
+@keyframes slide {
+  0%   { transform: translateX(150%) skewX(-12deg); }
+  100% { transform: translateX(-150%) skewX(-12deg); }
+}
+
+/* font-cairo Tailwind utility (CRITICAL: was missing as utility class) */
+.font-cairo {
+  font-family: var(--font-cairo, 'Cairo', sans-serif);
+}
+
 @keyframes marquee-r {
   0% { transform: translateX(0%); }
   100% { transform: translateX(-50%); }

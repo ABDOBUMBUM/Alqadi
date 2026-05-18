@@ -46,7 +46,7 @@ export default function PortalLogin() {
         // Redirect based on intended destination or dashboard
         const params = new URLSearchParams(window.location.search);
         const next = params.get("next");
-        router.push(next || "/admin");
+        router.push(next || "/portal/dashboard");
         router.refresh();
       }
     } catch {
