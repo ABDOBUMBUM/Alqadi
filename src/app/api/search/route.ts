@@ -1,456 +1,491 @@
 import { NextResponse } from "next/server";
 
-// خريطة المطارات الشاملة مع أسماء الدول والموانئ الجوية باللغتين العربية والإنجليزية
-const airportsMap: Record<string, { ar: string; en: string; country: string }> = {
-  "ADE": { ar: "عدن (ADE) - مطار عدن الدولي", en: "Aden (ADE) - Aden International Airport", country: "اليمن" },
-  "GXF": { ar: "سيئون (GXF) - مطار سيئون الدولي", en: "Seiyun (GXF) - Seiyun Airport", country: "اليمن" },
-  "SAH": { ar: "صنعاء (SAH) - مطار صنعاء الدولي", en: "Sanaa (SAH) - Sanaa International Airport", country: "اليمن" },
-  "RIY": { ar: "الريان (RIY) - مطار الريان الدولي", en: "Riyan (RIY) - Riyan Airport", country: "اليمن" },
-  "CAI": { ar: "القاهرة (CAI) - مطار القاهرة الدولي", en: "Cairo (CAI) - Cairo International Airport", country: "مصر" },
-  "JED": { ar: "جدة (JED) - مطار الملك عبدالعزيز", en: "Jeddah (JED) - King Abdulaziz International Airport", country: "السعودية" },
-  "RUH": { ar: "الرياض (RUH) - مطار الملك خالد", en: "Riyadh (RUH) - King Khalid International Airport", country: "السعودية" },
-  "AMM": { ar: "عمان (AMM) - مطار الملكة علياء", en: "Amman (AMM) - Queen Alia International Airport", country: "الأردن" },
-  "BOM": { ar: "مومباي (BOM) - مطار مومباي الدولي", en: "Mumbai (BOM) - Chhatrapati Shivaji Maharaj International Airport", country: "الهند" },
-  "KWI": { ar: "الكويت (KWI) - مطار الكويت الدولي", en: "Kuwait (KWI) - Kuwait International Airport", country: "الكويت" },
-  "IST": { ar: "إسطنبول (IST) - مطار إسطنبول الدولي", en: "Istanbul (IST) - Istanbul Airport", country: "تركيا" },
-  "CDG": { ar: "باريس (CDG) - مطار شارل ديغول", en: "Paris (CDG) - Charles de Gaulle Airport", country: "فرنسا" },
-  "LHR": { ar: "لندن (LHR) - مطار هيثرو الدولي", en: "London (LHR) - Heathrow Airport", country: "المملكة المتحدة" },
-  "DXB": { ar: "دبي (DXB) - مطار دبي الدولي", en: "Dubai (DXB) - Dubai International Airport", country: "الإمارات" }
+// ════════════════════════════════════════════════════════
+// 🗺️  خريطة المطارات
+// ════════════════════════════════════════════════════════
+const AIRPORTS: Record<string, { ar: string; country: string }> = {
+  ADE: { ar: "عدن - مطار عدن الدولي",             country: "اليمن" },
+  GXF: { ar: "سيئون - مطار سيئون الدولي",          country: "اليمن" },
+  SAH: { ar: "صنعاء - مطار صنعاء الدولي",          country: "اليمن" },
+  RIY: { ar: "الريان - مطار الريان الدولي",         country: "اليمن" },
+  CAI: { ar: "القاهرة - مطار القاهرة الدولي",       country: "مصر" },
+  JED: { ar: "جدة - مطار الملك عبدالعزيز",          country: "السعودية" },
+  RUH: { ar: "الرياض - مطار الملك خالد",            country: "السعودية" },
+  AMM: { ar: "عمان - مطار الملكة علياء",            country: "الأردن" },
+  KWI: { ar: "الكويت - مطار الكويت الدولي",         country: "الكويت" },
+  IST: { ar: "إسطنبول - مطار إسطنبول الدولي",       country: "تركيا" },
+  CDG: { ar: "باريس - مطار شارل ديغول",             country: "فرنسا" },
+  LHR: { ar: "لندن - مطار هيثرو الدولي",            country: "المملكة المتحدة" },
+  DXB: { ar: "دبي - مطار دبي الدولي",               country: "الإمارات" },
+  BOM: { ar: "مومباي - مطار مومباي الدولي",          country: "الهند" },
 };
 
-// خوارزمية لتحديد مواعيد الرحلات الواقعية (محاكاة دقيقة لجدول الرحلات)
-function getNextAvailableFlight(currentDate: Date, targetDays: number[]): Date {
-  const nextDate = new Date(currentDate);
-  nextDate.setDate(currentDate.getDate() + 1);
-  while (!targetDays.includes(nextDate.getDay())) {
-    nextDate.setDate(nextDate.getDate() + 1);
-  }
-  return nextDate;
+// ════════════════════════════════════════════════════════
+// ✈️  سجل شركات الطيران — أضف شركة جديدة هنا فقط
+// ════════════════════════════════════════════════════════
+type AirlineId = "FLY_ADEN" | "YEMENIA" | "TURKISH" | "AIR_FRANCE" | "BRITISH" | "EMIRATES";
+
+interface AirlineConfig {
+  id: AirlineId;
+  nameAr: string;
+  nameEn: string;
+  rating: number;
+  bookingBaseUrl: string;
+  /** أيام التشغيل 0=أحد … 6=سبت */
+  operatingDays: number[];
+  /** مسارات تدعمها هذه الشركة — مفتاح "ORIGIN-DEST" */
+  routes: string[];
 }
 
+const AIRLINES: Record<AirlineId, AirlineConfig> = {
+  FLY_ADEN: {
+    id: "FLY_ADEN",
+    nameAr: "طيران عدن (Fly Aden)",
+    nameEn: "Fly Aden",
+    rating: 4.9,
+    bookingBaseUrl:
+      "https://customer3.videcom.com/FlyAden/VARS/Public/b/FlightCal.aspx",
+    operatingDays: [2, 5, 6], // الثلاثاء، الجمعة، السبت
+    routes: ["ADE-CAI", "ADE-JED", "ADE-RUH", "ADE-AMM", "ADE-KWI",
+             "GXF-CAI", "SAH-CAI", "RIY-CAI"],
+  },
+  YEMENIA: {
+    id: "YEMENIA",
+    nameAr: "الخطوط الجوية اليمنية (Yemenia)",
+    nameEn: "Yemenia Airways",
+    rating: 4.6,
+    bookingBaseUrl: "https://yemenia.com/",
+    operatingDays: [0, 1, 3, 4], // الأحد، الاثنين، الأربعاء، الخميس
+    routes: ["ADE-CAI", "ADE-JED", "ADE-RUH", "ADE-AMM",
+             "SAH-CAI", "SAH-JED", "GXF-JED"],
+  },
+  TURKISH: {
+    id: "TURKISH",
+    nameAr: "الخطوط الجوية التركية (Turkish Airlines)",
+    nameEn: "Turkish Airlines",
+    rating: 4.8,
+    bookingBaseUrl: "https://www.turkishairlines.com/",
+    operatingDays: [0, 1, 2, 3, 4, 5, 6],
+    routes: ["ADE-IST", "JED-IST", "CAI-IST"],
+  },
+  AIR_FRANCE: {
+    id: "AIR_FRANCE",
+    nameAr: "الخطوط الجوية الفرنسية (Air France)",
+    nameEn: "Air France",
+    rating: 4.9,
+    bookingBaseUrl: "https://www.airfrance.com/",
+    operatingDays: [0, 2, 4, 6],
+    routes: ["ADE-CDG", "JED-CDG", "CAI-CDG"],
+  },
+  BRITISH: {
+    id: "BRITISH",
+    nameAr: "الخطوط الجوية البريطانية (British Airways)",
+    nameEn: "British Airways",
+    rating: 4.8,
+    bookingBaseUrl: "https://www.britishairways.com/",
+    operatingDays: [1, 3, 5],
+    routes: ["ADE-LHR", "JED-LHR", "CAI-LHR"],
+  },
+  EMIRATES: {
+    id: "EMIRATES",
+    nameAr: "طيران الإمارات (Emirates)",
+    nameEn: "Emirates",
+    rating: 4.9,
+    bookingBaseUrl: "https://www.emirates.com/",
+    operatingDays: [0, 1, 2, 3, 4, 5, 6],
+    routes: ["ADE-DXB", "JED-DXB", "CAI-DXB", "KWI-DXB"],
+  },
+};
+
+// ════════════════════════════════════════════════════════
+// 💺  نظام المقاعد — محاكاة واقعية مع بذرة ثابتة بالتاريخ
+// ════════════════════════════════════════════════════════
+interface SeatMap {
+  total: number;
+  booked: number;
+  available: number;
+  status: "متاح" | "محدود" | "ممتلئ تقريباً" | "ممتلئ";
+  statusEn: "available" | "limited" | "almost_full" | "full";
+  statusColor: string;
+}
+
+function generateSeats(flightId: string, flightDate: string, classType: string): SeatMap {
+  // بذرة حتمية = hash بسيط من معرف الرحلة + التاريخ + الفئة
+  let seed = 0;
+  const str = `${flightId}-${flightDate}-${classType}`;
+  for (let i = 0; i < str.length; i++) {
+    seed = (seed * 31 + str.charCodeAt(i)) & 0xffffffff;
+  }
+  const rng = Math.abs(seed) / 0x7fffffff;
+
+  const total = classType.includes("Business") ? 20 : classType.includes("Flex") ? 60 : 120;
+  const bookedPct = 0.3 + rng * 0.65; // 30%–95% محجوز
+  const booked = Math.min(total, Math.round(total * bookedPct));
+  const available = total - booked;
+  const pct = available / total;
+
+  let status: SeatMap["status"];
+  let statusEn: SeatMap["statusEn"];
+  let statusColor: string;
+
+  if (pct >= 0.5)      { status = "متاح";           statusEn = "available";   statusColor = "#10b981"; }
+  else if (pct >= 0.2) { status = "محدود";           statusEn = "limited";     statusColor = "#f59e0b"; }
+  else if (pct >= 0.05){ status = "ممتلئ تقريباً";   statusEn = "almost_full"; statusColor = "#ef4444"; }
+  else                  { status = "ممتلئ";            statusEn = "full";        statusColor = "#7f1d1d"; }
+
+  return { total, booked, available, status, statusEn, statusColor };
+}
+
+// ════════════════════════════════════════════════════════
+// 💰  جدول الأسعار الدقيق — USD أساس، SAR = ×3.75، KWD = ×0.306
+// ════════════════════════════════════════════════════════
+interface FareClass {
+  name: string;
+  flightCode: string;
+  departure: string;  // HH:MM
+  arrival: string;    // HH:MM
+  aircraft: string;
+  baggage: string;
+  priceUSD: number;
+  priceSAR: number;
+  priceKWD: number;
+  features: string;
+  bookingUrl?: string;
+}
+
+function buildFares(
+  airline: AirlineConfig,
+  origin: string,
+  dest: string,
+  baseUSD: number,
+  flightCode: string,
+  dep: string,
+  arr: string,
+  aircraft: string,
+  dateFormatted: string
+): FareClass[] {
+  const url = airline.bookingBaseUrl.includes("videcom")
+    ? `${airline.bookingBaseUrl}?outboundroute=${origin}-${dest}&journey=${dateFormatted}`
+    : airline.bookingBaseUrl;
+
+  return [
+    {
+      name: "سياحية توفيرية (Saver)",
+      flightCode: `${flightCode}`,
+      departure: dep,
+      arrival: arr,
+      aircraft,
+      baggage: "30 كجم + حقيبة يد 7 كجم",
+      priceUSD: baseUSD,
+      priceSAR: Math.round(baseUSD * 3.75),
+      priceKWD: Math.round(baseUSD * 0.306),
+      features: "وزن 30 كجم، وجبة ساخنة مجانية",
+      bookingUrl: url,
+    },
+    {
+      name: "سياحية مرنة (Flex)",
+      flightCode: `${flightCode}`,
+      departure: dep,
+      arrival: arr,
+      aircraft,
+      baggage: "40 كجم + حقيبة يد 10 كجم",
+      priceUSD: Math.round(baseUSD * 1.25),
+      priceSAR: Math.round(baseUSD * 1.25 * 3.75),
+      priceKWD: Math.round(baseUSD * 1.25 * 0.306),
+      features: "وزن 40 كجم، تعديل مجاني، اختيار مقعد مجاني",
+      bookingUrl: url,
+    },
+    {
+      name: "درجة الأعمال (Business)",
+      flightCode: `${flightCode}`,
+      departure: dep,
+      arrival: arr,
+      aircraft,
+      baggage: "45 كجم + حقيبة يد 14 كجم",
+      priceUSD: Math.round(baseUSD * 2.05),
+      priceSAR: Math.round(baseUSD * 2.05 * 3.75),
+      priceKWD: Math.round(baseUSD * 2.05 * 0.306),
+      features: "وزن 45 كجم، صالة VIP، مقعد مسطح، وجبات فاخرة",
+      bookingUrl: url,
+    },
+  ];
+}
+
+// ════════════════════════════════════════════════════════
+// 📅  التواريخ المساعدة
+// ════════════════════════════════════════════════════════
+function parseSearchDate(dateStr: string | undefined): Date {
+  if (!dateStr) return new Date();
+  const p = dateStr.split("-");
+  if (p.length === 3) {
+    return new Date(+p[0], +p[1] - 1, +p[2], 12, 0, 0);
+  }
+  return new Date(dateStr);
+}
+
+function nextFlight(from: Date, days: number[]): Date {
+  const d = new Date(from);
+  d.setDate(d.getDate() + 1);
+  while (!days.includes(d.getDay())) d.setDate(d.getDate() + 1);
+  return d;
+}
+
+function fmtEn(d: Date) {
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).replace(/ /g, "-");
+}
+function fmtAr(d: Date) {
+  return d.toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+}
+function isoDate(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+// ════════════════════════════════════════════════════════
+// 🏗️  بناء كارد الرحلة الكامل
+// ════════════════════════════════════════════════════════
+function buildFlightCard(
+  airline: AirlineConfig,
+  origin: string,
+  dest: string,
+  flightDate: Date,
+  isAlternative: boolean,
+  baseUSD: number,
+  flightCode: string,
+  dep: string,
+  arr: string,
+  duration: string,
+  aircraft: string
+) {
+  const dateEn  = fmtEn(flightDate);
+  const dateAr  = fmtAr(flightDate);
+  const dateISO = isoDate(flightDate);
+  const originInfo = AIRPORTS[origin] ?? { ar: origin, country: "" };
+  const destInfo   = AIRPORTS[dest]   ?? { ar: dest,   country: "" };
+
+  const fares = buildFares(airline, origin, dest, baseUSD, flightCode, dep, arr, aircraft, dateEn);
+
+  // حساب المقاعد لكل فئة
+  const options = fares.map((f) => {
+    const seats = generateSeats(`${airline.id}-${origin}-${dest}`, dateISO, f.name);
+    return {
+      name:        f.name,
+      flightCode:  f.flightCode,
+      departure:   f.departure,
+      arrival:     f.arrival,
+      aircraft:    f.aircraft,
+      baggage:     f.baggage,
+      price:       f.priceUSD,
+      priceUSD:    f.priceUSD,
+      priceSAR:    f.priceSAR,
+      priceKWD:    f.priceKWD,
+      description: `رحلة ${f.flightCode}. إقلاع ${f.departure}، وصول ${f.arrival}. طائرة ${f.aircraft}. ${f.features}. ${f.baggage}.`,
+      features:    f.features,
+      bookingUrl:  f.bookingUrl,
+      seats,
+    };
+  });
+
+  const minPrice = options[0].priceUSD;
+
+  return {
+    id: `${airline.id}-${origin}-${dest}-${dateISO}${isAlternative ? "-alt" : ""}`,
+    type: "flight",
+    title: `${airline.nameAr} — ${originInfo.ar} → ${destInfo.ar}${isAlternative ? " (أقرب رحلة متاحة)" : ""}`,
+    airline: airline.nameAr,
+    rating: airline.rating,
+    duration,
+    flightCode,
+    departure: dep,
+    arrival: arr,
+    aircraft,
+    dateText: dateAr,
+    dateISO,
+    isAlternative,
+    price: minPrice,
+    bookingUrl: airline.bookingBaseUrl,
+    options,
+  };
+}
+
+// ════════════════════════════════════════════════════════
+// 📋  بيانات الرحلات — أضف مسارًا هنا بسهولة
+// ════════════════════════════════════════════════════════
+interface RouteSpec {
+  airlineId: AirlineId;
+  baseUSD: number;
+  flightCode: string;
+  dep: string;   // departure HH:MM
+  arr: string;   // arrival HH:MM
+  duration: string;
+  aircraft: string;
+}
+
+const ROUTE_SPECS: Record<string, RouteSpec[]> = {
+  "ADE-CAI": [
+    { airlineId: "FLY_ADEN", baseUSD: 244, flightCode: "AD 102", dep: "16:30", arr: "20:00", duration: "3س 30د", aircraft: "Boeing 737-800" },
+    { airlineId: "YEMENIA",  baseUSD: 250, flightCode: "IY 600", dep: "08:00", arr: "11:30", duration: "3س 30د", aircraft: "Airbus A320" },
+  ],
+  "ADE-JED": [
+    { airlineId: "FLY_ADEN", baseUSD: 180, flightCode: "AD 210", dep: "10:00", arr: "12:15", duration: "2س 15د", aircraft: "Boeing 737-800" },
+    { airlineId: "YEMENIA",  baseUSD: 190, flightCode: "IY 512", dep: "06:30", arr: "08:45", duration: "2س 15د", aircraft: "Airbus A320" },
+  ],
+  "ADE-RUH": [
+    { airlineId: "FLY_ADEN", baseUSD: 200, flightCode: "AD 312", dep: "09:00", arr: "12:00", duration: "3س",     aircraft: "Boeing 737-800" },
+    { airlineId: "YEMENIA",  baseUSD: 210, flightCode: "IY 420", dep: "13:30", arr: "16:30", duration: "3س",     aircraft: "Airbus A320" },
+  ],
+  "ADE-AMM": [
+    { airlineId: "FLY_ADEN", baseUSD: 290, flightCode: "AD 450", dep: "11:00", arr: "14:30", duration: "3س 30د", aircraft: "Boeing 737-800" },
+    { airlineId: "YEMENIA",  baseUSD: 300, flightCode: "IY 700", dep: "07:00", arr: "10:30", duration: "3س 30د", aircraft: "Airbus A320" },
+  ],
+  "ADE-KWI": [
+    { airlineId: "FLY_ADEN", baseUSD: 270, flightCode: "AD 520", dep: "14:00", arr: "17:30", duration: "3س 30د", aircraft: "Boeing 737-800" },
+  ],
+  "ADE-IST": [
+    { airlineId: "TURKISH",  baseUSD: 370, flightCode: "TK 182", dep: "09:30", arr: "13:45", duration: "4س 15د", aircraft: "Airbus A321" },
+  ],
+  "ADE-CDG": [
+    { airlineId: "AIR_FRANCE", baseUSD: 466, flightCode: "AF 980", dep: "11:00", arr: "17:10", duration: "6س 10د", aircraft: "Boeing 777" },
+  ],
+  "ADE-LHR": [
+    { airlineId: "BRITISH", baseUSD: 585, flightCode: "BA 122", dep: "08:30", arr: "15:15", duration: "6س 45د", aircraft: "Airbus A350" },
+  ],
+  "ADE-DXB": [
+    { airlineId: "EMIRATES", baseUSD: 220, flightCode: "EK 855", dep: "14:00", arr: "16:15", duration: "2س 15د", aircraft: "Boeing 777-300ER" },
+  ],
+  "SAH-CAI": [
+    { airlineId: "FLY_ADEN", baseUSD: 260, flightCode: "AD 104", dep: "15:00", arr: "18:30", duration: "3س 30د", aircraft: "Boeing 737-800" },
+    { airlineId: "YEMENIA",  baseUSD: 270, flightCode: "IY 602", dep: "09:00", arr: "12:30", duration: "3س 30د", aircraft: "Airbus A320" },
+  ],
+  "GXF-CAI": [
+    { airlineId: "FLY_ADEN", baseUSD: 240, flightCode: "AD 106", dep: "10:00", arr: "13:00", duration: "3س",     aircraft: "Boeing 737-800" },
+  ],
+  "GXF-JED": [
+    { airlineId: "YEMENIA",  baseUSD: 170, flightCode: "IY 514", dep: "08:00", arr: "10:00", duration: "2س",     aircraft: "Airbus A320" },
+  ],
+  "SAH-JED": [
+    { airlineId: "YEMENIA",  baseUSD: 175, flightCode: "IY 516", dep: "07:30", arr: "09:45", duration: "2س 15د", aircraft: "Airbus A320" },
+  ],
+  "RIY-CAI": [
+    { airlineId: "FLY_ADEN", baseUSD: 255, flightCode: "AD 108", dep: "12:00", arr: "15:30", duration: "3س 30د", aircraft: "Boeing 737-800" },
+  ],
+  "JED-IST": [
+    { airlineId: "TURKISH",  baseUSD: 400, flightCode: "TK 184", dep: "11:00", arr: "15:15", duration: "4س 15د", aircraft: "Airbus A321" },
+  ],
+  "JED-CDG": [
+    { airlineId: "AIR_FRANCE", baseUSD: 500, flightCode: "AF 982", dep: "09:00", arr: "14:30", duration: "5س 30د", aircraft: "Boeing 777" },
+  ],
+  "JED-LHR": [
+    { airlineId: "BRITISH", baseUSD: 620, flightCode: "BA 124", dep: "10:00", arr: "16:45", duration: "6س 45د", aircraft: "Airbus A350" },
+  ],
+  "JED-DXB": [
+    { airlineId: "EMIRATES", baseUSD: 240, flightCode: "EK 857", dep: "15:00", arr: "17:15", duration: "2س 15د", aircraft: "Boeing 777-300ER" },
+  ],
+  "KWI-DXB": [
+    { airlineId: "EMIRATES", baseUSD: 160, flightCode: "EK 860", dep: "13:00", arr: "14:30", duration: "1س 30د", aircraft: "Boeing 777-300ER" },
+  ],
+};
+
+// ════════════════════════════════════════════════════════
+// 🚀  POST Handler
+// ════════════════════════════════════════════════════════
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { origin, destination, date, passengers, query } = body;
 
     if (!origin || !destination) {
-      return NextResponse.json(
-        { error: "Origin and destination are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Origin and destination are required" }, { status: 400 });
     }
 
-    // حل مشكلة فرق التوقيت (Timezone Shift) عبر قراءة التاريخ بشكل آمن محلياً
-    let searchDate = new Date();
-    if (date) {
-      const parts = date.split('-');
-      if (parts.length === 3) {
-        // تعيين الساعة 12 ظهراً لتجنب أي إزاحة بسبب التوقيت المحلي للمخدم
-        searchDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
-      } else {
-        searchDate = new Date(date);
-      }
-    }
+    // التحقق من أن تاريخ البحث ليس في الماضي
+    const searchDate = parseSearchDate(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    const dayOfWeek = searchDate.getDay(); // 0 = Sunday, 1 = Monday, 2 = Tuesday, etc.
-    const results = [];
-    let message = "";
-
-    const formatted = searchDate.toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}).replace(/ /g, '-');
-    const formattedArabicDate = searchDate.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    const originInfo = airportsMap[origin] || { ar: origin, en: origin, country: "" };
-    const destInfo = airportsMap[destination] || { ar: destination, en: destination, country: "" };
-    const originName = originInfo.ar;
-    const destName = destInfo.ar;
-
-    // ══ تحقق مما إذا كانت الوجهة مطابقة لخطوط منشورات القاضي الإعلانية المحددة ════
-    const isFlyerDestination = ["CAI", "IST", "CDG", "LHR", "DXB"].includes(destination);
-
-    if (isFlyerDestination) {
-      // بناء خطوط رحلات الإعلانات الفاخرة بالأسعار والمواصفات الكاملة
-      if (destination === "CAI") {
-        results.push({
-          id: `flyer-flight-cai-${formatted}`,
-          type: "flight",
-          title: `طيران عدن (Fly Aden) - من ${originName} إلى ${destName}`,
-          airline: "طيران عدن (Fly Aden)",
-          rating: 4.9,
-          duration: "3س 30د (مباشر)",
-          dateText: formattedArabicDate,
-          price: 244,
-          bookingUrl: `https://customer3.videcom.com/FlyAden/VARS/Public/b/FlightCal.aspx?outboundroute=${origin}-${destination}&journey=${formatted}`,
-          options: [
-            {
-              name: "سياحية توفيرية (Saver)",
-              price: 244,
-              priceUSD: 244,
-              priceSAR: 915,
-              priceKWD: 95,
-              description: "رحلة مباشرة AD 102. إقلاع 16:30، وصول 20:00 (بتوقيت القاهرة). طائرة Boeing 737-800. يشمل وزن 30 كجم + حقيبة يد 7 كجم.",
-              bookingUrl: `https://customer3.videcom.com/FlyAden/VARS/Public/b/FlightCal.aspx?outboundroute=${origin}-${destination}&journey=${formatted}`
-            },
-            {
-              name: "سياحية مرنة (Flex)",
-              price: 306,
-              priceUSD: 306,
-              priceSAR: 1150,
-              priceKWD: 120,
-              description: "رحلة مباشرة AD 102. إقلاع 16:30، وصول 20:00 (بتوقيت القاهرة). طائرة Boeing 737-800. يشمل وزن 40 كجم + حقيبة يد 10 كجم. تعديل مجاني للحجز.",
-              bookingUrl: `https://customer3.videcom.com/FlyAden/VARS/Public/b/FlightCal.aspx?outboundroute=${origin}-${destination}&journey=${formatted}`
-            },
-            {
-              name: "درجة الأعمال (Business)",
-              price: 493,
-              priceUSD: 493,
-              priceSAR: 1850,
-              priceKWD: 190,
-              description: "رحلة مباشرة AD 102. درجة الأعمال الفاخرة. إقلاع 16:30، وصول 20:00. يشمل دخول صالة VIP ومقاعد واسعة مكسوة بالجلد ووزن 45 كجم + وجبات ساخنة فاخرة.",
-              bookingUrl: `https://customer3.videcom.com/FlyAden/VARS/Public/b/FlightCal.aspx?outboundroute=${origin}-${destination}&journey=${formatted}`
-            }
-          ]
-        });
-
-        // إضافة خيار الخطوط اليمنية كخيار بديل/إضافي فاخر لتوفير تنوع كامل للعملاء
-        results.push({
-          id: `flyer-flight-cai-yemenia-${formatted}`,
-          type: "flight",
-          title: `الخطوط اليمنية (Yemenia) - من ${originName} إلى ${destName}`,
-          airline: "الخطوط الجوية اليمنية (Yemenia)",
-          rating: 4.7,
-          duration: "3س 30د (مباشر)",
-          dateText: formattedArabicDate,
-          price: 250,
-          bookingUrl: `https://yemenia.com/`,
-          options: [
-            {
-              name: "سياحية توفيرية (Saver)",
-              price: 250,
-              priceUSD: 250,
-              priceSAR: 938,
-              priceKWD: 98,
-              description: "رحلة مباشرة IY 600. إقلاع 08:00 صباحاً، وصول 11:30. طائرة Airbus A320. يشمل وزن 30 كجم + حقيبة يد 7 كجم ووجبة ساخنة أثناء الرحلة.",
-              bookingUrl: "https://yemenia.com/"
-            },
-            {
-              name: "درجة الأعمال (Business)",
-              price: 510,
-              priceUSD: 510,
-              priceSAR: 1912,
-              priceKWD: 198,
-              description: "رحلة مباشرة IY 600. درجة الأعمال الفاخرة. صالة كبار الشخصيات VIP، مقاعد مريحة للغاية ووزن 40 كجم + وجبات خاصة ومشروبات مجانية.",
-              bookingUrl: "https://yemenia.com/"
-            }
-          ]
-        });
-      } else if (destination === "IST") {
-        results.push({
-          id: `flyer-flight-ist-${formatted}`,
-          type: "flight",
-          title: `الخطوط الجوية التركية - من ${originName} إلى ${destName}`,
-          airline: "الخطوط الجوية التركية (Turkish Airlines)",
-          rating: 4.8,
-          duration: "4س 15د (مباشر)",
-          dateText: formattedArabicDate,
-          price: 370,
-          bookingUrl: `https://www.turkishairlines.com/`,
-          options: [
-            {
-              name: "سياحية توفيرية (Saver)",
-              price: 370,
-              priceUSD: 370,
-              priceSAR: 1390,
-              priceKWD: 145,
-              description: "رحلة مباشرة TK 182. إقلاع 09:30، وصول 13:45. طائرة Airbus A321. يشمل وزن 30 كجم + نظام ترفيهي متكامل ووجبة مجانية.",
-              bookingUrl: "https://www.turkishairlines.com/"
-            },
-            {
-              name: "سياحية مرنة (Flex)",
-              price: 448,
-              priceUSD: 448,
-              priceSAR: 1680,
-              priceKWD: 175,
-              description: "رحلة مباشرة TK 182. يشمل وزن 40 كجم، إمكانية تعديل الحجز مجاناً بالكامل، اختيار المقعد المفضل مجاناً ووجبة ساخنة فاخرة.",
-              bookingUrl: "https://www.turkishairlines.com/"
-            },
-            {
-              name: "درجة الأعمال (Business)",
-              price: 640,
-              priceUSD: 640,
-              priceSAR: 2400,
-              priceKWD: 250,
-              description: "درجة الأعمال الملكية TK 182. يشمل دخول صالة CIP الفاخرة الحائزة على جوائز، مقعد مسطح بالكامل، وجبات طهاة الطائرة الخاصة ووزن 45 كجم.",
-              bookingUrl: "https://www.turkishairlines.com/"
-            }
-          ]
-        });
-      } else if (destination === "CDG") {
-        results.push({
-          id: `flyer-flight-cdg-${formatted}`,
-          type: "flight",
-          title: `الخطوط الجوية الفرنسية - من ${originName} إلى ${destName}`,
-          airline: "الخطوط الجوية الفرنسية (Air France)",
-          rating: 4.9,
-          duration: "6س 10د (مباشر)",
-          dateText: formattedArabicDate,
-          price: 466,
-          bookingUrl: `https://www.airfrance.com/`,
-          options: [
-            {
-              name: "سياحية توفيرية (Saver)",
-              price: 466,
-              priceUSD: 466,
-              priceSAR: 1750,
-              priceKWD: 175,
-              description: "رحلة مباشرة AF 980. إقلاع 11:00، وصول 17:10. طائرة Boeing 777. يشمل وزن 30 كجم، نظام ترفيه ممتاز ووجبات طازجة.",
-              bookingUrl: "https://www.airfrance.com/"
-            },
-            {
-              name: "سياحية مرنة (Flex)",
-              price: 546,
-              priceUSD: 546,
-              priceSAR: 2050,
-              priceKWD: 210,
-              description: "رحلة مباشرة AF 980. يشمل وزن 40 كجم، تعديل مجاني بالكامل ووجبات طازجة مستوحاة من المطبخ الفرنسي العريق واختيار مقاعد مجاني.",
-              bookingUrl: "https://www.airfrance.com/"
-            },
-            {
-              name: "درجة الأعمال (Business)",
-              price: 826,
-              priceUSD: 826,
-              priceSAR: 3100,
-              priceKWD: 320,
-              description: "درجة الأعمال الحصرية AF 980. يشمل سرير مسطح فاخر مريح للغاية، دخول صالة المطار المتميزة، وجبات فاخرة معدة من طهاة ميشلان ووزن 45 كجم.",
-              bookingUrl: "https://www.airfrance.com/"
-            }
-          ]
-        });
-      } else if (destination === "LHR") {
-        results.push({
-          id: `flyer-flight-lhr-${formatted}`,
-          type: "flight",
-          title: `الخطوط الجوية البريطانية - من ${originName} إلى ${destName}`,
-          airline: "الخطوط الجوية البريطانية (British Airways)",
-          rating: 4.8,
-          duration: "6س 45د (مباشر)",
-          dateText: formattedArabicDate,
-          price: 585,
-          bookingUrl: `https://www.britishairways.com/`,
-          options: [
-            {
-              name: "سياحية توفيرية (Saver)",
-              price: 585,
-              priceUSD: 585,
-              priceSAR: 2196,
-              priceKWD: 216,
-              description: "رحلة مباشرة BA 122. إقلاع 08:30، وصول 15:15. طائرة Airbus A350 الحديثة. يشمل وزن 30 كجم، وجبة إفطار بريطانية متكاملة ونظام ترفيه متطور.",
-              bookingUrl: "https://www.britishairways.com/"
-            },
-            {
-              name: "سياحية مرنة (Flex)",
-              price: 666,
-              priceUSD: 666,
-              priceSAR: 2500,
-              priceKWD: 260,
-              description: "رحلة مباشرة BA 122. يشمل وزن 40 كجم، إمكانية تعديل الحجز بالكامل مجاناً، اختيار المقاعد مجاناً ومستوى راحة إضافي.",
-              bookingUrl: "https://www.britishairways.com/"
-            },
-            {
-              name: "درجة الأعمال (Business)",
-              price: 1013,
-              priceUSD: 1013,
-              priceSAR: 3800,
-              priceKWD: 390,
-              description: "درجة الأعمال Club World BA 122. جناح خاص متكامل مع باب منزلق، سرير مسطح 2 متر، وجبات إنجليزية تقليدية فاخرة، دخول صالة المطار الفخمة.",
-              bookingUrl: "https://www.britishairways.com/"
-            }
-          ]
-        });
-      } else if (destination === "DXB") {
-        results.push({
-          id: `flyer-flight-dxb-${formatted}`,
-          type: "flight",
-          title: `طيران الإمارات - من ${originName} إلى ${destName}`,
-          airline: "طيران الإمارات (Emirates)",
-          rating: 4.9,
-          duration: "2س 15د (مباشر)",
-          dateText: formattedArabicDate,
-          price: 635,
-          bookingUrl: `https://www.emirates.com/`,
-          options: [
-            {
-              name: "سياحية توفيرية (Saver)",
-              price: 635,
-              priceUSD: 635,
-              priceSAR: 2380,
-              priceKWD: 238,
-              description: "رحلة مباشرة EK 855. إقلاع 14:00، وصول 16:15. طائرة Boeing 777-300ER. يشمل وزن 30 كجم ونظام ICE الترفيهي الفائز بجوائز ووجبة ساخنة.",
-              bookingUrl: "https://www.emirates.com/"
-            },
-            {
-              name: "سياحية مرنة (Flex)",
-              price: 746,
-              priceUSD: 746,
-              priceSAR: 2800,
-              priceKWD: 285,
-              description: "رحلة مباشرة EK 855. يشمل وزن 40 كجم، إمكانية تعديل الحجز مجاناً، اختيار المقعد، نظام ICE للترفيه، مع وجبة غداء فاخرة مجانية.",
-              bookingUrl: "https://www.emirates.com/"
-            },
-            {
-              name: "درجة الأعمال (Business)",
-              price: 1093,
-              priceUSD: 1093,
-              priceSAR: 4100,
-              priceKWD: 420,
-              description: "درجة الأعمال الفاخرة EK 855. مقعد مكسو بالجلد الطبيعي يتحول لسرير، شاشة عرض 23 بوصة، دخول صالات الإمارات الفاخرة، سيارة مرسيدس بسائق للتوصيل مجاناً.",
-              bookingUrl: "https://www.emirates.com/"
-            }
-          ]
-        });
-      }
-    } else {
-      // ══ خطوط طيران بديلة للمدن اللوجستية الأخرى (مثل عدن وسيئون والرياض وجدة ومومباي) ══
-      // جدول طيران عدن الواقعي (الثلاثاء = 2، الجمعة = 5، السبت = 6)
-      const flyAdenDays = [2, 5, 6]; 
-      
-      // جدول الخطوط اليمنية الواقعي (الأحد = 0، الإثنين = 1، الأربعاء = 3، الخميس = 4)
-      const yemeniaDays = [0, 1, 3, 4];
-
-      const createFlyAdenFlightsUnified = (flightDate: Date, isAlternative = false) => {
-        const fDate = flightDate.toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}).replace(/ /g, '-');
-        const fArabic = flightDate.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-        
-        return {
-          id: `flyaden-unified-${fDate}-${isAlternative ? 'alt' : 'primary'}`,
-          type: "flight",
-          title: `طيران عدن (Fly Aden) - من ${originName} إلى ${destName} ${isAlternative ? '(رحلة بديلة)' : ''}`,
-          airline: "طيران عدن (Fly Aden)",
-          rating: 4.9,
-          duration: "3س 30د (مباشر)",
-          dateText: fArabic,
-          price: 520,
-          bookingUrl: `https://customer3.videcom.com/FlyAden/VARS/Public/b/FlightCal.aspx?outboundroute=${origin}-${destination}&journey=${fDate}`,
-          options: [
-            {
-              name: "سياحية توفيرية (Saver)",
-              price: 520,
-              priceUSD: 520,
-              priceSAR: 1950,
-              priceKWD: 160,
-              description: "رحلة مباشرة AD 102. إقلاع 16:30، وصول 20:00 (بتوقيت الوجهة). يشمل وزن 30 كجم + حقيبة يد 7 كجم.",
-              bookingUrl: `https://customer3.videcom.com/FlyAden/VARS/Public/b/FlightCal.aspx?outboundroute=${origin}-${destination}&journey=${fDate}`
-            },
-            {
-              name: "سياحية مرنة (Flex)",
-              price: 570,
-              priceUSD: 570,
-              priceSAR: 2137,
-              priceKWD: 175,
-              description: "رحلة مباشرة AD 102. إقلاع 16:30، وصول 20:00. يشمل وزن 40 كجم + حقيبة يد 10 كجم. تعديل مجاني للحجز.",
-              bookingUrl: `https://customer3.videcom.com/FlyAden/VARS/Public/b/FlightCal.aspx?outboundroute=${origin}-${destination}&journey=${fDate}`
-            },
-            {
-              name: "درجة الأعمال (Business)",
-              price: 750,
-              priceUSD: 750,
-              priceSAR: 2812,
-              priceKWD: 230,
-              description: "درجة الأعمال الفاخرة. إقلاع 16:30، وصول 20:00. يشمل دخول صالة VIP ومقاعد واسعة مريحة ووزن 45 كجم + وجبات ساخنة فاخرة.",
-              bookingUrl: `https://customer3.videcom.com/FlyAden/VARS/Public/b/FlightCal.aspx?outboundroute=${origin}-${destination}&journey=${fDate}`
-            }
-          ]
-        };
-      };
-
-      const createYemeniaFlightsUnified = (flightDate: Date, isAlternative = false) => {
-        const fDate = flightDate.toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}).replace(/ /g, '-');
-        const fArabic = flightDate.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-
-        return {
-          id: `yemenia-unified-${fDate}-${isAlternative ? 'alt' : 'primary'}`,
-          type: "flight",
-          title: `الخطوط اليمنية (Yemenia) - من ${originName} إلى ${destName} ${isAlternative ? '(رحلة بديلة)' : ''}`,
-          airline: "الخطوط الجوية اليمنية (Yemenia)",
-          rating: 4.6,
-          duration: "3س 30د (مباشر)",
-          dateText: fArabic,
-          price: 550,
-          bookingUrl: `https://yemenia.com/`,
-          options: [
-            {
-              name: "سياحية توفيرية (Saver)",
-              price: 550,
-              priceUSD: 550,
-              priceSAR: 2062,
-              priceKWD: 170,
-              description: "رحلة مباشرة IY 600. إقلاع 08:00 صباحاً، وصول 11:30. طائرة Airbus A320. يشمل وزن 30 كجم + حقيبة يد 7 كجم.",
-              bookingUrl: "https://yemenia.com/"
-            },
-            {
-              name: "درجة الأعمال (Business)",
-              price: 780,
-              priceUSD: 780,
-              priceSAR: 2925,
-              priceKWD: 240,
-              description: "رحلة مباشرة IY 600. درجة الأعمال. إقلاع 08:00 صباحاً، وصول 11:30. صالة كبار الشخصيات VIP، مقاعد مريحة للغاية ووزن 40 كجم + خدمات ممتازة.",
-              bookingUrl: "https://yemenia.com/"
-            }
-          ]
-        };
-      };
-
-      // 1. تحقق وإضافة الرحلات الأساسية لليوم المختار
-      if (flyAdenDays.includes(dayOfWeek)) {
-        results.push(createFlyAdenFlightsUnified(searchDate, false));
-      }
-      if (yemeniaDays.includes(dayOfWeek)) {
-        results.push(createYemeniaFlightsUnified(searchDate, false));
-      }
-
-      // 2. إذا كانت شركة الطيران لا تطير في هذا اليوم، اعرض اليمنية واقترح أقرب رحلة بديلة
-      if (!flyAdenDays.includes(dayOfWeek)) {
-        const nextFlyAden = getNextAvailableFlight(searchDate, flyAdenDays);
-        results.push(createFlyAdenFlightsUnified(nextFlyAden, true));
-        
-        const formattedNext = nextFlyAden.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' });
-        message = `رحلات طيران عدن المباشرة متوفرة يوم ${formattedNext}. تم إدراجها كخيارات بديلة أدناه.`;
-      }
-
-      if (!yemeniaDays.includes(dayOfWeek)) {
-        const nextYemenia = getNextAvailableFlight(searchDate, yemeniaDays);
-        results.push(createYemeniaFlightsUnified(nextYemenia, true));
-
-        if (!message) {
-          const formattedNextYemenia = nextYemenia.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' });
-          message = `رحلات الخطوط اليمنية المباشرة متوفرة يوم ${formattedNextYemenia}. تم إدراجها كخيارات بديلة أدناه.`;
-        }
-      }
-    }
-
-    // 3. إضافة الباقات الفندقية إذا كان الاستعلام يحتوي على كلمة "فندق" أو "باقة"
-    if (query && (query.includes("فندق") || query.includes("باقة"))) {
-      results.push({
-        id: "alqadi-package",
-        type: "package",
-        title: `باقة إقامة فاخرة بالقاهرة - مجموعة القاضي الذهبية`,
-        description: `إقامة 5 ليالٍ في جناح فخم بفندق 5 نجوم (مطل على النيل) شاملة الإفطار، الاستقبال من المطار والتوديع بسيارة خاصة مع جولات سياحية مميزة.`,
-        price: 950,
-        priceUSD: 950,
-        priceSAR: 3500,
-        priceKWD: 290,
-        airline: "مجموعة القاضي الذهبية",
-        rating: 5.0,
-        duration: "5 ليالي",
-        dateText: formattedArabicDate,
-        bookingUrl: "/portal/packages"
+    if (searchDate < today) {
+      return NextResponse.json({
+        results: [],
+        message: `⚠️ التاريخ المحدد (${fmtAr(searchDate)}) مضى. الرجاء اختيار تاريخ من اليوم فصاعداً.`,
       });
     }
 
+    const routeKey = `${origin}-${destination}`;
+    const specs    = ROUTE_SPECS[routeKey];
+
+    if (!specs || specs.length === 0) {
+      return NextResponse.json({
+        results: [],
+        message: `لا توجد رحلات مسجلة على الخط ${routeKey}. تواصل مع فريق الدعم لحجز رحلة مخصصة.`,
+      });
+    }
+
+    const results: ReturnType<typeof buildFlightCard>[] = [];
+    const messages: string[] = [];
+    const passengerCount = parseInt(String(passengers)) || 1;
+
+    for (const spec of specs) {
+      const airline    = AIRLINES[spec.airlineId];
+      const dayOfWeek  = searchDate.getDay();
+      const fliesOnDay = airline.operatingDays.includes(dayOfWeek);
+
+      if (fliesOnDay) {
+        // الرحلة متاحة في اليوم المطلوب
+        const card = buildFlightCard(
+          airline, origin, destination, searchDate, false,
+          spec.baseUSD, spec.flightCode, spec.dep, spec.arr, spec.duration, spec.aircraft
+        );
+
+        // تحقق من توفر مقاعد كافية للمسافرين
+        const saverSeats = card.options[0].seats;
+        if (saverSeats.available < passengerCount && saverSeats.statusEn === "full") {
+          const alt = nextFlight(searchDate, airline.operatingDays);
+          const altCard = buildFlightCard(
+            airline, origin, destination, alt, true,
+            spec.baseUSD, spec.flightCode, spec.dep, spec.arr, spec.duration, spec.aircraft
+          );
+          results.push(altCard);
+          messages.push(`رحلة ${spec.flightCode} في ${fmtAr(searchDate)} ممتلئة — تم اقتراح أقرب رحلة متاحة يوم ${fmtAr(alt)}.`);
+        } else {
+          results.push(card);
+        }
+      } else {
+        // لا تطير هذا اليوم — أقرب رحلة بديلة
+        const alt = nextFlight(searchDate, airline.operatingDays);
+        const altCard = buildFlightCard(
+          airline, origin, destination, alt, true,
+          spec.baseUSD, spec.flightCode, spec.dep, spec.arr, spec.duration, spec.aircraft
+        );
+        results.push(altCard);
+        messages.push(`${airline.nameAr} لا تطير يوم ${fmtAr(searchDate)}. أقرب رحلة يوم ${fmtAr(alt)}.`);
+      }
+    }
+
+    // باقة فندقية إذا طُلبت
+    if (query && (query.includes("فندق") || query.includes("باقة"))) {
+      const destInfo = AIRPORTS[destination] ?? { ar: destination };
+      (results as any[]).push({
+        id: "alqadi-package",
+        type: "package",
+        title: `باقة إقامة فاخرة — ${destInfo.ar}`,
+        description: "إقامة 5 ليالٍ فندق 5 نجوم شاملة الإفطار، الاستقبال من المطار، وجولات سياحية مميزة.",
+        price: 950,
+        priceUSD: 950,
+        priceSAR: 3563,
+        priceKWD: 291,
+        airline: "مجموعة القاضي الذهبية",
+        rating: 5.0,
+        duration: "5 ليالي",
+        dateText: fmtAr(searchDate),
+        bookingUrl: "/portal/packages",
+        options: [],
+      });
+    }
+
+    const message = messages.length > 0 ? messages.join(" | ") : "";
+
     return NextResponse.json({ results, message });
-  } catch (error) {
-    console.error("Search API Error:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error("Search API Error:", err);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

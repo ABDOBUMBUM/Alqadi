@@ -172,7 +172,6 @@ const Tile = ({ icon: Icon, label }: { icon: React.ComponentType<any>; label: st
 );
 
 // 5. Result Card
-// 5. Result Card
 const ResultCard = ({ res, currencyMode }: { res: SearchResult; currencyMode: 'USD' | 'SAR' | 'KWD' }) => {
   const [selectedOption, setSelectedOption] = useState(0);
 
@@ -197,101 +196,136 @@ const ResultCard = ({ res, currencyMode }: { res: SearchResult; currencyMode: 'U
       </div>
       
       {/* Flight Header */}
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center relative z-10 gap-4 border-b border-white/5 pb-4">
-        <div className="flex-1 text-right">
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            <span className="text-[10px] font-black px-3 py-1 bg-[#b08d57]/20 text-[#b08d57] rounded-full uppercase tracking-wider">
-              {res.type === 'flight' ? 'رحلة طيران مباشرة' : 'باقة إقامة سياحية'}
-            </span>
-            <div className="flex items-center gap-1 text-[#b08d57]">
-              <Star className="w-3.5 h-3.5 fill-[#b08d57]" />
-              <span className="text-xs font-black">{res.rating}</span>
-            </div>
-            
-            {res.dateText && (
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-slate-300 text-[10px] tracking-wide font-cairo font-bold">
-                <Calendar className="w-3.5 h-3.5 text-[#b08d57]" />
-                <span>تاريخ البحث: {res.dateText}</span>
-              </div>
-            )}
+      <div className="flex flex-col relative z-10 gap-3 border-b border-white/5 pb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] font-black px-3 py-1 bg-[#b08d57]/20 text-[#b08d57] rounded-full uppercase tracking-wider">
+            {res.type === 'flight' ? 'رحلة طيران مباشرة' : 'باقة إقامة سياحية'}
+          </span>
+          <div className="flex items-center gap-1 text-[#b08d57]">
+            <Star className="w-3.5 h-3.5 fill-[#b08d57]" />
+            <span className="text-xs font-black">{res.rating}</span>
           </div>
-          
-          <h4 className="text-2xl font-black text-white mb-1 font-cairo tracking-tight">
-            {res.title.includes('(رحلة بديلة)') ? (
-              <span className="flex items-center gap-2">
-                {res.title.replace('(رحلة بديلة)', '')}
-                <span className="text-[10px] bg-red-500/20 text-red-400 px-3 py-1 rounded-full border border-red-500/30 font-black animate-pulse">رحلة بديلة مقترحة</span>
-              </span>
-            ) : (
-              res.title
-            )}
-          </h4>
-          <p className="text-slate-400 text-sm font-cairo font-bold">{res.airline}</p>
+          {res.dateText && (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-slate-300 text-[10px] font-bold">
+              <Calendar className="w-3.5 h-3.5 text-[#b08d57]" />
+              <span>تاريخ الرحلة: {res.dateText}</span>
+            </div>
+          )}
+          {(res as any).isAlternative && (
+            <span className="text-[10px] bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full border border-amber-500/30 font-black animate-pulse">
+              ⚡ أقرب رحلة متاحة
+            </span>
+          )}
         </div>
+
+        <h4 className="text-xl font-black text-white font-cairo tracking-tight">
+          {res.title.replace('(رحلة بديلة)', '').replace('(أقرب رحلة متاحة)', '').trim()}
+        </h4>
+        <p className="text-slate-400 text-sm font-bold">{res.airline}</p>
+
+        {/* كود الرحلة + مواعيد + طائرة */}
+        {(res as any).flightCode && (
+          <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400 font-bold">
+            <span className="px-2 py-0.5 bg-white/5 rounded-lg border border-white/10 font-mono text-slate-300">
+              ✈ {(res as any).flightCode}
+            </span>
+            {(res as any).departure && <span>🛫 إقلاع {(res as any).departure}</span>}
+            {(res as any).arrival   && <span>🛬 وصول {(res as any).arrival}</span>}
+            {(res as any).aircraft  && <span className="text-slate-600">{(res as any).aircraft}</span>}
+          </div>
+        )}
       </div>
 
-      {/* Flight Class Cards (خيارات داخل الـ Cards مضمن فيها التاريخ والسعر) */}
+      {/* درجات الحجز */}
       <div className="relative z-10 flex flex-col gap-3">
-        <label className="text-xs font-black text-[#b08d57] uppercase tracking-wider font-cairo">درجات الحجز المتاحة (اختر فئة التذكرة):</label>
-        
+        <label className="text-xs font-black text-[#b08d57] uppercase tracking-wider">درجات الحجز المتاحة (اختر فئة التذكرة):</label>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {options.map((opt, idx) => {
             const isSelected = selectedOption === idx;
-            
-            // قراءة السعر الدقيق بناءً على العملة
+            const seats = (opt as any).seats;
+            const isFull = seats?.statusEn === 'full';
+
             let optPrice = opt.price;
-            if (currencyMode === 'SAR') {
-              optPrice = (opt as any).priceSAR || Math.round(opt.price * 3.75);
-            } else if (currencyMode === 'KWD') {
-              optPrice = (opt as any).priceKWD || Math.round(opt.price * 0.31);
-            } else {
-              optPrice = (opt as any).priceUSD || opt.price;
-            }
-            
-            // تخصيص الألوان والشارات حسب الدرجة
+            if (currencyMode === 'SAR') optPrice = (opt as any).priceSAR || Math.round(opt.price * 3.75);
+            else if (currencyMode === 'KWD') optPrice = (opt as any).priceKWD || Math.round(opt.price * 0.306);
+            else optPrice = (opt as any).priceUSD || opt.price;
+
             let badgeStyle = "bg-slate-500/10 text-slate-400 border border-slate-500/20";
-            let activeBorder = "border-[#b08d57] bg-[#b08d57]/5";
-            let inactiveBorder = "border-white/5 hover:border-white/15 bg-white/5";
-            
-            if (opt.name.includes("Business") || opt.name.includes("الأعمال")) {
+            if (opt.name.includes("Business") || opt.name.includes("الأعمال"))
               badgeStyle = "bg-[#b08d57]/20 text-[#b08d57] border border-[#b08d57]/30";
-            } else if (opt.name.includes("Flex") || opt.name.includes("مرنة")) {
+            else if (opt.name.includes("Flex") || opt.name.includes("مرنة"))
               badgeStyle = "bg-blue-500/20 text-blue-400 border border-blue-500/30";
-            }
-            
+
+            const cardCls = isFull
+              ? "border-red-500/20 bg-red-500/5 opacity-60 cursor-not-allowed"
+              : isSelected
+                ? "border-[#b08d57] bg-[#b08d57]/5"
+                : "border-white/5 hover:border-white/15 bg-white/5";
+
             return (
               <button
                 key={idx}
-                onClick={() => setSelectedOption(idx)}
-                className={`text-right p-4 rounded-2xl border transition-all duration-300 flex flex-col justify-between gap-3 relative ${
-                  isSelected ? activeBorder : inactiveBorder
-                }`}
+                onClick={() => !isFull && setSelectedOption(idx)}
+                disabled={isFull}
+                className={`text-right p-4 rounded-2xl border transition-all duration-300 flex flex-col gap-2 relative ${cardCls}`}
               >
-                {/* Check & Badge */}
+                {/* اسم الدرجة + علامة اختيار */}
                 <div className="flex justify-between items-center w-full">
                   <span className={`text-[10px] font-black px-2 py-0.5 rounded ${badgeStyle}`}>
                     {opt.name}
                   </span>
                   <div className={`w-5 h-5 rounded-full flex items-center justify-center border transition-all ${
-                    isSelected ? 'border-[#b08d57] bg-[#b08d57]' : 'border-white/20'
+                    isSelected && !isFull ? 'border-[#b08d57] bg-[#b08d57]' : 'border-white/20'
                   }`}>
-                    {isSelected && <Check className="w-3.5 h-3.5 text-[#0f172a] stroke-[3]" />}
+                    {isSelected && !isFull && <Check className="w-3.5 h-3.5 text-[#0f172a] stroke-[3]" />}
                   </div>
                 </div>
 
-                {/* Option Embedded Flight Date (مضمن فيها التاريخ) */}
-                <div className="flex items-center gap-1.5 text-slate-300 text-[11px] font-bold mt-1">
-                  <Calendar className="w-3.5 h-3.5 text-[#b08d57] shrink-0" />
-                  <span className="truncate">تاريخ الرحلة: {res.dateText}</span>
+                {/* تاريخ + وقت */}
+                <div className="flex items-center gap-1.5 text-slate-300 text-[10px] font-bold">
+                  <Calendar className="w-3 h-3 text-[#b08d57] shrink-0" />
+                  <span>{res.dateText}</span>
                 </div>
+                {(opt as any).departure && (
+                  <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold">
+                    <span>🛫 {(opt as any).departure}</span>
+                    <span className="text-slate-600">←</span>
+                    <span>🛬 {(opt as any).arrival}</span>
+                  </div>
+                )}
 
-                {/* Pricing & Booking Action */}
-                <div className="flex justify-between items-baseline w-full border-t border-white/5 pt-2 mt-1">
+                {/* مؤشر المقاعد */}
+                {seats && (
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: seats.statusColor }} />
+                      <span className="text-[10px] font-black" style={{ color: seats.statusColor }}>
+                        {seats.status} · {seats.available} مقعد
+                      </span>
+                    </div>
+                    <div className="w-14 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${Math.round((seats.booked / seats.total) * 100)}%`,
+                          backgroundColor: seats.statusColor
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* السعر */}
+                <div className="flex justify-between items-baseline w-full border-t border-white/5 pt-2">
                   <span className="text-[10px] font-bold text-slate-400">السعر الكلي:</span>
-                  <div>
-                    <span className="text-xl font-black text-white">{optPrice}</span>
-                    <span className="text-xs text-[#b08d57] font-black mr-1">{displayCurrency}</span>
-                  </div>
+                  {isFull ? (
+                    <span className="text-sm font-black text-red-400">ممتلئ</span>
+                  ) : (
+                    <div>
+                      <span className="text-xl font-black text-white">{optPrice.toLocaleString()}</span>
+                      <span className="text-xs text-[#b08d57] font-black mr-1">{displayCurrency}</span>
+                    </div>
+                  )}
                 </div>
               </button>
             );
@@ -299,17 +333,20 @@ const ResultCard = ({ res, currencyMode }: { res: SearchResult; currencyMode: 'U
         </div>
       </div>
 
-      {/* Selected Option Description details */}
+      {/* تفاصيل الدرجة المختارة */}
       <div className="bg-white/5 border border-white/10 rounded-2xl p-5 relative z-10">
         <h5 className="text-xs font-black text-[#b08d57] mb-2 flex items-center gap-1.5">
           <Database className="w-3.5 h-3.5" />
           تفاصيل ومميزات الدرجة المختارة:
         </h5>
-        <p className="text-slate-300 text-sm leading-relaxed font-cairo font-bold">{activeOpt.description}</p>
+        <p className="text-slate-300 text-sm leading-relaxed font-bold">{activeOpt.description}</p>
+        {(activeOpt as any).baggage && (
+          <p className="text-slate-500 text-xs mt-1.5">🧳 {(activeOpt as any).baggage}</p>
+        )}
       </div>
       
-      {/* Bottom Info and Direct Link button */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs text-slate-500 font-medium relative z-10 border-t border-white/5 pt-4 mt-2">
+      {/* أسفل الكارد */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs relative z-10 border-t border-white/5 pt-4">
         <div className="flex items-center gap-4 text-slate-400">
           <div className="flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5 text-[#b08d57]" />
@@ -317,21 +354,22 @@ const ResultCard = ({ res, currencyMode }: { res: SearchResult; currencyMode: 'U
           </div>
           <div className="flex items-center gap-1.5">
             <Database className="w-3.5 h-3.5 text-[#b08d57]" />
-            <span className="font-bold">مزامنة حية من المزود المعتمد</span>
+            <span className="font-bold">Videcom · الحجز المباشر</span>
           </div>
         </div>
 
         <button 
           onClick={() => {
             if (activeOpt.bookingUrl) {
-              window.open(activeOpt.bookingUrl, '_blank');
-            } else {
-              alert('جاري نقلك إلى منصة الحجز المعتمدة...');
+              const url = new URL(activeOpt.bookingUrl, window.location.origin);
+              if (res.dateText) url.searchParams.set("date", res.dateText);
+              window.open(url.toString(), '_blank');
             }
           }}
-          className="py-3 px-6 bg-[#b08d57] hover:bg-[#967543] text-[#0f172a] rounded-xl font-black transition-all font-cairo shadow-lg shadow-[#b08d57]/10 flex items-center justify-center gap-2 border border-transparent"
+          disabled={(activeOpt as any).seats?.statusEn === 'full'}
+          className="py-3 px-6 bg-[#b08d57] hover:bg-[#967543] disabled:opacity-40 disabled:cursor-not-allowed text-[#0f172a] rounded-xl font-black transition-all font-cairo shadow-lg shadow-[#b08d57]/10 flex items-center justify-center gap-2"
         >
-          <span>تأكيد الحجز الفوري وإصدار التذكرة</span>
+          <span>تأكيد الحجز وإصدار التذكرة</span>
           <Plane className="w-4 h-4 text-[#0f172a]" />
         </button>
       </div>
