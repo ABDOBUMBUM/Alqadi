@@ -173,7 +173,7 @@ const Tile = ({ icon: Icon, label }: { icon: React.ComponentType<any>; label: st
 
 // 5. Result Card
 // 5. Result Card
-const ResultCard = ({ res, currencyMode }: { res: SearchResult; currencyMode: 'USD' | 'SAR' }) => {
+const ResultCard = ({ res, currencyMode }: { res: SearchResult; currencyMode: 'USD' | 'SAR' | 'KWD' }) => {
   const [selectedOption, setSelectedOption] = useState(0);
 
   const options = res.options && res.options.length > 0 ? res.options : [{
@@ -184,7 +184,7 @@ const ResultCard = ({ res, currencyMode }: { res: SearchResult; currencyMode: 'U
   }];
 
   const activeOpt = options[selectedOption] || options[0];
-  const displayCurrency = currencyMode === 'SAR' ? 'ر.س' : '$';
+  const displayCurrency = currencyMode === 'SAR' ? 'ر.س' : currencyMode === 'KWD' ? 'د.ك' : '$';
 
   return (
     <motion.div
@@ -236,8 +236,17 @@ const ResultCard = ({ res, currencyMode }: { res: SearchResult; currencyMode: 'U
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {options.map((opt, idx) => {
-            const optPrice = currencyMode === 'SAR' ? Math.round(opt.price * 3.75) : opt.price;
             const isSelected = selectedOption === idx;
+            
+            // قراءة السعر الدقيق بناءً على العملة
+            let optPrice = opt.price;
+            if (currencyMode === 'SAR') {
+              optPrice = (opt as any).priceSAR || Math.round(opt.price * 3.75);
+            } else if (currencyMode === 'KWD') {
+              optPrice = (opt as any).priceKWD || Math.round(opt.price * 0.31);
+            } else {
+              optPrice = (opt as any).priceUSD || opt.price;
+            }
             
             // تخصيص الألوان والشارات حسب الدرجة
             let badgeStyle = "bg-slate-500/10 text-slate-400 border border-slate-500/20";
@@ -308,7 +317,7 @@ const ResultCard = ({ res, currencyMode }: { res: SearchResult; currencyMode: 'U
           </div>
           <div className="flex items-center gap-1.5">
             <Database className="w-3.5 h-3.5 text-[#b08d57]" />
-            <span className="font-bold">مزامنة حية من Videcom</span>
+            <span className="font-bold">مزامنة حية من المزود المعتمد</span>
           </div>
         </div>
 
@@ -317,7 +326,7 @@ const ResultCard = ({ res, currencyMode }: { res: SearchResult; currencyMode: 'U
             if (activeOpt.bookingUrl) {
               window.open(activeOpt.bookingUrl, '_blank');
             } else {
-              alert('جاري نقلك إلى منصة الحجز...');
+              alert('جاري نقلك إلى منصة الحجز المعتمدة...');
             }
           }}
           className="py-3 px-6 bg-[#b08d57] hover:bg-[#967543] text-[#0f172a] rounded-xl font-black transition-all font-cairo shadow-lg shadow-[#b08d57]/10 flex items-center justify-center gap-2 border border-transparent"
@@ -385,8 +394,23 @@ const countriesData: Record<string, { code: string; name: string }[]> = {
     { code: "JED", name: "جدة (JED) - مطار الملك عبدالعزيز" },
     { code: "RUH", name: "الرياض (RUH) - مطار الملك خالد" }
   ],
+  "الكويت": [
+    { code: "KWI", name: "الكويت (KWI) - مطار الكويت الدولي" }
+  ],
   "مصر": [
     { code: "CAI", name: "القاهرة (CAI) - مطار القاهرة الدولي" }
+  ],
+  "تركيا": [
+    { code: "IST", name: "إسطنبول (IST) - مطار إسطنبول الدولي" }
+  ],
+  "فرنسا": [
+    { code: "CDG", name: "باريس (CDG) - مطار شارل ديغول" }
+  ],
+  "المملكة المتحدة": [
+    { code: "LHR", name: "لندن (LHR) - مطار هيثرو الدولي" }
+  ],
+  "الإمارات": [
+    { code: "DXB", name: "دبي (DXB) - مطار دبي الدولي" }
   ],
   "الأردن": [
     { code: "AMM", name: "عمان (AMM) - مطار الملكة علياء" }
@@ -418,7 +442,7 @@ export default function BookingPortalPage() {
   const [destination, setDestination] = useState("CAI");
   const [date, setDate] = useState("");
   const [passengers, setPassengers] = useState("1 Adult");
-  const [currencyMode, setCurrencyMode] = useState<'USD' | 'SAR'>('SAR'); // وضع العملة الافتراضية للريال السعودي
+  const [currencyMode, setCurrencyMode] = useState<'USD' | 'SAR' | 'KWD'>('SAR'); // وضع العملة الافتراضية للريال السعودي
 
   const handleOriginCountryChange = (c: string) => {
     setOriginCountry(c);
@@ -1001,13 +1025,19 @@ export default function BookingPortalPage() {
                         onClick={() => setCurrencyMode('USD')}
                         className={`px-4 py-1.5 rounded-lg font-bold text-xs transition-all ${currencyMode === 'USD' ? 'bg-[#b08d57] text-[#0f172a] shadow-md shadow-[#b08d57]/20' : 'text-slate-400 hover:text-white'}`}
                       >
-                        دولار أمريكي ($)
+                        دولار ($)
                       </button>
                       <button 
                         onClick={() => setCurrencyMode('SAR')}
                         className={`px-4 py-1.5 rounded-lg font-bold text-xs transition-all ${currencyMode === 'SAR' ? 'bg-[#b08d57] text-[#0f172a] shadow-md shadow-[#b08d57]/20' : 'text-slate-400 hover:text-white'}`}
                       >
                         ريال سعودي (ر.س)
+                      </button>
+                      <button 
+                        onClick={() => setCurrencyMode('KWD')}
+                        className={`px-4 py-1.5 rounded-lg font-bold text-xs transition-all ${currencyMode === 'KWD' ? 'bg-[#b08d57] text-[#0f172a] shadow-md shadow-[#b08d57]/20' : 'text-slate-400 hover:text-white'}`}
+                      >
+                        دينار كويتي (د.ك)
                       </button>
                     </div>
                   </div>

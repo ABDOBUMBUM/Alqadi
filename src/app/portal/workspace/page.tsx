@@ -31,6 +31,12 @@ async function loadPricing(): Promise<PricingRow[]> {
     { destination: "اسطنبول", ticketPrice: "145", securityApproval: "15", visaFee: "30" },
     { destination: "لندن", ticketPrice: "210", securityApproval: "20", visaFee: "50" },
     { destination: "دبي", ticketPrice: "80", securityApproval: "10", visaFee: "0" },
+    { destination: "الكويت", ticketPrice: "100", securityApproval: "10", visaFee: "15" },
+    { destination: "الرياض", ticketPrice: "90", securityApproval: "5", visaFee: "10" },
+    { destination: "جدة", ticketPrice: "95", securityApproval: "5", visaFee: "10" },
+    { destination: "عمان", ticketPrice: "110", securityApproval: "10", visaFee: "20" },
+    { destination: "باريس", ticketPrice: "220", securityApproval: "20", visaFee: "50" },
+    { destination: "مومباي", ticketPrice: "130", securityApproval: "15", visaFee: "30" },
   ];
 }
 
@@ -40,6 +46,7 @@ export default function WorkspacePage() {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [pricing, setPricing] = useState<PricingRow[]>([]);
+  const [workspaceCurrency, setWorkspaceCurrency] = useState<'USD' | 'SAR' | 'KWD'>('SAR'); // وضع العملة الافتراضية
 
   // Comprehensive Client CRM
   const [clientName, setClientName] = useState("");
@@ -109,6 +116,16 @@ export default function WorkspacePage() {
   
   const grandTotal = ticketTotal + securityTotal + visaTotal + hotelEstimated;
 
+  const getDisplayPrice = (usdAmount: number) => {
+    if (workspaceCurrency === 'SAR') {
+      return `${(usdAmount * 3.75).toFixed(2)} ر.س`;
+    }
+    if (workspaceCurrency === 'KWD') {
+      return `${(usdAmount * 0.30).toFixed(2)} د.ك`;
+    }
+    return `$${usdAmount.toFixed(2)}`;
+  };
+
   function logout() {
     import("next-auth/react").then(({ signOut }) => {
       try { localStorage.removeItem(SESSION_KEY); } catch { /**/ }
@@ -118,13 +135,13 @@ export default function WorkspacePage() {
 
   function generateQuote() {
     if (!clientName || !destination) return;
-    const msg = `✈️ عرض سعر متكامل — ${destination}\n\nالعميل: ${clientName}\nتاريخ السفر المفضل: ${travelDate || 'غير محدد'}\nعدد المسافرين: ${passengers}\n\nتفاصيل التسعير:\n• تذاكر الطيران: $${ticketTotal}\n• الموافقة الأمنية: $${securityTotal}\n${requiresVisa ? `• رسوم التأشيرة: $${visaTotal}\n` : ''}${requiresHotel ? `• حجوزات فندقية (مقدرة): $${hotelEstimated}\n` : ''}\n💰 الإجمالي الكلي: $${grandTotal}\n\nللحجز والاستفسار: مجموعة القاضي الذهبية 🌟`;
+    const msg = `✈️ عرض سعر متكامل — ${destination}\n\nالعميل: ${clientName}\nتاريخ السفر المفضل: ${travelDate || 'غير محدد'}\nعدد المسافرين: ${passengers}\n\nتفاصيل التسعير:\n• تذاكر الطيران: ${getDisplayPrice(ticketTotal)}\n• الموافقة الأمنية: ${getDisplayPrice(securityTotal)}\n${requiresVisa ? `• رسوم التأشيرة: ${getDisplayPrice(visaTotal)}\n` : ''}${requiresHotel ? `• حجوزات فندقية (مقدرة): ${getDisplayPrice(hotelEstimated)}\n` : ''}\n💰 الإجمالي الكلي: ${getDisplayPrice(grandTotal)}\n\nللحجز والاستفسار: مجموعة القاضي الذهبية 🌟`;
     setMessages(m => [...m, { role: "ai", text: msg }]);
   }
 
   function generateReply() {
     if (!clientName || !destination) return;
-    const reply = `مرحباً ${clientName} 😊\n\nشكراً لتواصلك مع مجموعة القاضي الذهبية للسفريات.\n\nبخصوص استفساركم عن رحلة ${destination}، يسعدنا إخبارك بأن لدينا أفضل العروض المتاحة بأسعار تنافسية. السعر الإجمالي المقدر لكامل الخدمات هو $${grandTotal}.\n\nنحن هنا لخدمتك ونتطلع لتلبية كافة احتياجاتك. 🌍✈️\n\nفريق خدمة العملاء — القاضي الذهبية`;
+    const reply = `مرحباً ${clientName} 😊\n\nشكراً لتواصلك مع مجموعة القاضي الذهبية للسفريات.\n\nبخصوص استفساركم عن رحلة ${destination}، يسعدنا إخبارك بأن لدينا أفضل العروض المتاحة بأسعار تنافسية. السعر الإجمالي المقدر لكامل الخدمات هو ${getDisplayPrice(grandTotal)}.\n\nنحن هنا لخدمتك ونتطلع لتلبية كافة احتياجاتك. 🌍✈️\n\nفريق خدمة العملاء — القاضي الذهبية`;
     setMessages(m => [...m, { role: "ai", text: reply }]);
   }
 
@@ -284,9 +301,31 @@ export default function WorkspacePage() {
 
               {/* Advanced Pricing Calculator */}
               <div className="rounded-2xl border border-gold-500/20 bg-gradient-to-b from-gold-500/5 to-transparent p-6">
-                <h2 className="mb-6 flex items-center gap-2 text-base font-bold text-white">
-                  <Calculator className="h-5 w-5 text-gold-400" /> عرض السعر الشامل
-                </h2>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                  <h2 className="flex items-center gap-2 text-base font-bold text-white">
+                    <Calculator className="h-5 w-5 text-gold-400" /> عرض السعر الشامل
+                  </h2>
+                  <div className="flex gap-1 p-0.5 bg-slate-950 rounded-xl border border-white/10 shrink-0 font-cairo">
+                    <button 
+                      onClick={() => setWorkspaceCurrency('USD')}
+                      className={`px-3 py-1 rounded-lg font-bold text-xs transition-all ${workspaceCurrency === 'USD' ? 'bg-gold-500 text-slate-950 shadow-md shadow-gold-500/20' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      USD ($)
+                    </button>
+                    <button 
+                      onClick={() => setWorkspaceCurrency('SAR')}
+                      className={`px-3 py-1 rounded-lg font-bold text-xs transition-all ${workspaceCurrency === 'SAR' ? 'bg-gold-500 text-slate-950 shadow-md shadow-gold-500/20' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      SAR (ر.س)
+                    </button>
+                    <button 
+                      onClick={() => setWorkspaceCurrency('KWD')}
+                      className={`px-3 py-1 rounded-lg font-bold text-xs transition-all ${workspaceCurrency === 'KWD' ? 'bg-gold-500 text-slate-950 shadow-md shadow-gold-500/20' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      KWD (د.ك)
+                    </button>
+                  </div>
+                </div>
                 
                 {selectedPricing ? (
                   <div className="space-y-3">
@@ -295,41 +334,41 @@ export default function WorkspacePage() {
                       <div className="flex items-center gap-2 text-slate-300">
                         <Ticket className="w-4 h-4 text-white/40" /> <span>تذاكر الطيران</span>
                       </div>
-                      <div className="font-mono">${ticketTotal} <span className="text-xs text-white/30 ml-2">(${selectedPricing.ticketPrice} × {passengers})</span></div>
+                      <div className="font-mono">{getDisplayPrice(ticketTotal)} <span className="text-xs text-white/30 ml-2">({getDisplayPrice(Number(selectedPricing.ticketPrice))} × {passengers})</span></div>
                     </div>
                     
                     <div className="flex items-center justify-between py-2 border-b border-white/5">
                       <div className="flex items-center gap-2 text-slate-300">
                         <ShieldCheck className="w-4 h-4 text-white/40" /> <span>الموافقة الأمنية</span>
                       </div>
-                      <div className="font-mono">${securityTotal} <span className="text-xs text-white/30 ml-2">(${selectedPricing.securityApproval} × {passengers})</span></div>
+                      <div className="font-mono">{getDisplayPrice(securityTotal)} <span className="text-xs text-white/30 ml-2">({getDisplayPrice(Number(selectedPricing.securityApproval))} × {passengers})</span></div>
                     </div>
-
+ 
                     {requiresVisa && (
                       <div className="flex items-center justify-between py-2 border-b border-white/5">
                         <div className="flex items-center gap-2 text-slate-300">
                           <FileText className="w-4 h-4 text-white/40" /> <span>تأشيرة الدخول</span>
                         </div>
-                        <div className="font-mono">${visaTotal} <span className="text-xs text-white/30 ml-2">(${selectedPricing.visaFee} × {passengers})</span></div>
+                        <div className="font-mono">{getDisplayPrice(visaTotal)} <span className="text-xs text-white/30 ml-2">({getDisplayPrice(Number(selectedPricing.visaFee))} × {passengers})</span></div>
                       </div>
                     )}
-
+ 
                     {requiresHotel && (
                       <div className="flex items-center justify-between py-2 border-b border-white/5">
                         <div className="flex items-center gap-2 text-slate-300">
                           <Building2 className="w-4 h-4 text-white/40" /> <span>الحجز الفندقي</span>
                         </div>
-                        <div className="font-mono">${hotelEstimated} <span className="text-xs text-white/30 ml-2">(تقديري)</span></div>
+                        <div className="font-mono">{getDisplayPrice(hotelEstimated)} <span className="text-xs text-white/30 ml-2">(تقديري)</span></div>
                       </div>
                     )}
-
+ 
                     {/* Total */}
                     <div className="mt-6 pt-4 flex items-center justify-between rounded-xl border border-gold-500/30 bg-gold-500/10 px-5 py-4">
                       <div>
                         <span className="block font-bold text-gold-300 text-lg">الإجمالي الكلي</span>
                         <span className="block text-xs text-gold-400/60">يشمل الضرائب والرسوم الأساسية</span>
                       </div>
-                      <span className="font-mono text-3xl font-black text-white">${grandTotal}</span>
+                      <span className="font-mono text-2xl font-black text-white">{getDisplayPrice(grandTotal)}</span>
                     </div>
 
                     {/* Quick actions */}
